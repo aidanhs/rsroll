@@ -59,25 +59,26 @@ pub fn rollsum_sum(buf: &[u8], ofs: usize, len: usize) -> u32 {
     rs.digest()
 }
 
-pub fn split_find_ofs(buf: &[u8], len: usize, bits: &mut isize) -> isize {
+pub fn split_find_ofs(buf: &[u8]) -> (isize, isize) {
+    let mut bits: isize = -1;
     let mut rs: Rollsum = Default::default();
-    for count in 0..len {
+    for count in 0..buf.len() {
         rs.roll(buf[count]);
-        if !(self.s2 & (BLOB_SIZE - 1) == (!0) & (BLOB_SIZE - 1)) {
+        if !(rs.s2 & (BLOB_SIZE - 1) == (!0) & (BLOB_SIZE - 1)) {
             continue;
         }
         let mut rsum: u32 = rs.digest() >> BLOB_BITS;
-        *bits = BLOB_BITS as isize;
+        bits = BLOB_BITS as isize;
         loop {
             rsum >>= 1;
             if (rsum & 1) == 0 {
                 break;
             }
-            (*bits) += 1;
+            bits += 1;
         }
-        return count as isize + 1;
+        return (count as isize + 1, bits);
     }
-    return 0;
+    return (0, bits);
 }
 
 
