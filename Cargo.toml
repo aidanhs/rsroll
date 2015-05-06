@@ -1,0 +1,7 @@
+[package]
+name = "rollsum"
+version = "0.1.0"
+authors = ["Aidan Hobson Sayers <aidanhs@cantab.net>"]
+
+[dependencies]
+rand = "0.3"
