@@ -63,18 +63,19 @@ pub fn split_find_ofs(buf: &[u8], len: usize, bits: &mut isize) -> isize {
     let mut rs: Rollsum = Default::default();
     for count in 0..len {
         rs.roll(buf[count]);
-        if rs.s2 & (BLOB_SIZE - 1) == (!0) & (BLOB_SIZE - 1) {
-            let mut rsum: u32 = rs.digest() >> BLOB_BITS;
-            *bits = BLOB_BITS as isize;
-            loop {
-                rsum >>= 1;
-                if (rsum & 1) == 0 {
-                    break;
-                }
-                (*bits) += 1;
-            }
-            return count as isize + 1;
+        if !(self.s2 & (BLOB_SIZE - 1) == (!0) & (BLOB_SIZE - 1)) {
+            continue;
         }
+        let mut rsum: u32 = rs.digest() >> BLOB_BITS;
+        *bits = BLOB_BITS as isize;
+        loop {
+            rsum >>= 1;
+            if (rsum & 1) == 0 {
+                break;
+            }
+            (*bits) += 1;
+        }
+        return count as isize + 1;
     }
     return 0;
 }
