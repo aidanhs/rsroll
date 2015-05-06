@@ -32,39 +32,39 @@ impl Default for Rollsum {
     }
 }
 
-fn rollsum_add(r: &mut Rollsum, drop: u8, add: u8) {
-    r.s1 += add as usize;
-    r.s1 -= drop as usize;
-    r.s2 += r.s1;
-    r.s2 -= WINDOW_SIZE * (drop as usize + CHAR_OFFSET);
-}
-
-pub fn rollsum_roll(r: &mut Rollsum, newch: u8) {
-    // https://github.com/rust-lang/rfcs/issues/811
-    let prevch = r.window[r.wofs];
-    rollsum_add(r, prevch, newch);
-    r.window[r.wofs] = newch;
-    r.wofs = (r.wofs + 1) % WINDOW_SIZE;
-}
-
-pub fn rollsum_digest(r: &Rollsum) -> u32 {
-    ((r.s1 as u32) << 16) | ((r.s2 as u32) & 0xffff)
+impl Rollsum {
+    fn add(&mut self, drop: u8, add: u8) {
+        self.s1 += add as usize;
+        self.s1 -= drop as usize;
+        self.s2 += self.s1;
+        self.s2 -= WINDOW_SIZE * (drop as usize + CHAR_OFFSET);
+    }
+    pub fn roll(&mut self, newch: u8) {
+        // https://github.com/rust-lang/rfcs/issues/811
+        let prevch = self.window[self.wofs];
+        self.add(prevch, newch);
+        self.window[self.wofs] = newch;
+        self.wofs = (self.wofs + 1) % WINDOW_SIZE;
+    }
+    pub fn digest(&self) -> u32 {
+        ((self.s1 as u32) << 16) | ((self.s2 as u32) & 0xffff)
+    }
 }
 
 pub fn rollsum_sum(buf: &[u8], ofs: usize, len: usize) -> u32 {
-    let mut r: Rollsum = Default::default();
+    let mut rs: Rollsum = Default::default();
     for count in ofs..len {
-        rollsum_roll(&mut r, buf[count]);
+        rs.roll(buf[count]);
     }
-    rollsum_digest(&r)
+    rs.digest()
 }
 
 pub fn split_find_ofs(buf: &[u8], len: usize, bits: &mut isize) -> isize {
-    let mut r: Rollsum = Default::default();
+    let mut rs: Rollsum = Default::default();
     for count in 0..len {
-        rollsum_roll(&mut r, buf[count]);
-        if r.s2 & (BLOB_SIZE - 1) == (!0) & (BLOB_SIZE - 1) {
-            let mut rsum: u32 = rollsum_digest(&r) >> BLOB_BITS;
+        rs.roll(buf[count]);
+        if rs.s2 & (BLOB_SIZE - 1) == (!0) & (BLOB_SIZE - 1) {
+            let mut rsum: u32 = rs.digest() >> BLOB_BITS;
             *bits = BLOB_BITS as isize;
             loop {
                 rsum >>= 1;
