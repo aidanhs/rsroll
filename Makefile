@@ -1,5 +1,5 @@
 PKG_NAME=rollsum
-DOCS_DEFAULT_MODULE=rollsum
+DOCS_DEFAULT_MODULE=$(PKG_NAME)
 
 ifeq (, $(shell which cargo-check 2> /dev/null))
 DEFAULT_TARGET=build

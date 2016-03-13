@@ -1,87 +1,48 @@
-/*
- * Strongly based on
- * https://github.com/bup/bup/blob/706e8d273/lib/bup/bupsplit.c
- * https://github.com/bup/bup/blob/706e8d273/lib/bup/bupsplit.h
- * (a bit like https://godoc.org/camlistore.org/pkg/rollsum)
- */
-
 #[cfg(test)]
 extern crate rand;
 
-use std::default::Default;
+/// Rolling sum and chunk splitting used by
+/// `bup` - https://github.com/bup/bup/
+pub mod bup;
 
-const BLOB_BITS: usize = 13;
-const BLOB_SIZE: usize = 1 << BLOB_BITS;
-const WINDOW_BITS: usize = 6;
-pub const WINDOW_SIZE: usize = 1 << WINDOW_BITS;
+pub use bup::Bup;
 
-const CHAR_OFFSET: usize = 31;
+/// Rolling sum engine trait
+pub trait Engine {
+    type Digest;
 
-pub struct Rollsum {
-    pub s1: usize,
-    pub s2: usize,
-    pub window: [u8; WINDOW_SIZE],
-    pub wofs: usize,
-}
+    /// Roll over one byte
+    fn roll_byte(&mut self, byte: u8);
 
-impl Default for Rollsum {
-    fn default() -> Rollsum {
-        Rollsum {
-            s1: WINDOW_SIZE * CHAR_OFFSET,
-            s2: WINDOW_SIZE * (WINDOW_SIZE-1) * CHAR_OFFSET,
-            window: [0; WINDOW_SIZE],
-            wofs: 0,
-        }
+    /// Roll over a slice of bytes
+    fn roll(&mut self, buf: &[u8]) {
+        let _ = buf.iter().map(|&b| self.roll_byte(b)).count();
     }
-}
 
-impl Rollsum {
-    fn add(&mut self, drop: u8, add: u8) {
-        self.s1 += add as usize;
-        self.s1 -= drop as usize;
-        self.s2 += self.s1;
-        self.s2 -= WINDOW_SIZE * (drop as usize + CHAR_OFFSET);
-    }
-    pub fn roll(&mut self, newch: u8) {
-        // https://github.com/rust-lang/rfcs/issues/811
-        let prevch = self.window[self.wofs];
-        self.add(prevch, newch);
-        self.window[self.wofs] = newch;
-        self.wofs = (self.wofs + 1) % WINDOW_SIZE;
-    }
-    pub fn digest(&self) -> u32 {
-        ((self.s1 as u32) << 16) | ((self.s2 as u32) & 0xffff)
-    }
-}
+    /// Return current rolling sum digest
+    fn digest(&self) -> Self::Digest;
 
-pub fn rollsum_sum(buf: &[u8], ofs: usize, len: usize) -> u32 {
-    let mut rs: Rollsum = Default::default();
-    for count in ofs..len {
-        rs.roll(buf[count]);
-    }
-    rs.digest()
-}
+    /// Find the end of the chunk.
+    ///
+    /// Feed engine bytes from `buf` and stop when chunk split was found.
+    ///
+    /// Use `cond` function as chunk split condition.
+    ///
+    /// Return:
+    /// None - no chunk split was found
+    /// Some(offset) - offset of the first unconsumed byte of `buf`.
+    ///   offset == buf.len() if the chunk ended right after whole `buf`.
+    fn find_chunk_edge_cond<F>(&mut self, buf: &[u8], cond : F) -> Option<usize>
+    where F : Fn(&Self) -> bool {
+        for (i, &b) in buf.iter().enumerate() {
+            self.roll_byte(b);
 
-pub fn split_find_ofs(buf: &[u8]) -> (usize, isize) {
-    let mut bits: isize = -1;
-    let mut rs: Rollsum = Default::default();
-    for count in 0..buf.len() {
-        rs.roll(buf[count]);
-        if !(rs.s2 & (BLOB_SIZE - 1) == (!0) & (BLOB_SIZE - 1)) {
-            continue;
-        }
-        let mut rsum: u32 = rs.digest() >> BLOB_BITS;
-        bits = BLOB_BITS as isize;
-        loop {
-            rsum >>= 1;
-            if (rsum & 1) == 0 {
-                break;
+            if cond(self) {
+                return Some(i + 1);
             }
-            bits += 1;
         }
-        return (count + 1, bits);
+        return None;
     }
-    return (0, bits);
 }
 
 #[cfg(test)]
