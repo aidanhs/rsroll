@@ -7,10 +7,10 @@ const WINDOW_SIZE: usize = 1 << WINDOW_BITS;
 const CHAR_OFFSET: usize = 31;
 
 /// Default chunk size used by `bup`
-pub const CHUNK_SIZE: u32 = 1 << CHUNK_SIZE_LOG2;
+pub const CHUNK_SIZE: u32 = 1 << CHUNK_BITS;
 
 /// Default chunk size used by `bup` (log2)
-pub const CHUNK_SIZE_LOG2: u32 = 13;
+pub const CHUNK_BITS: u32 = 13;
 
 
 /// Rolling checksum method used by `bup`
@@ -74,5 +74,29 @@ impl Bup {
         self.find_chunk_edge_cond(buf, |e : &Bup |
             (e.digest() & (CHUNK_SIZE - 1)) == (CHUNK_SIZE - 1)
         )
+    }
+
+    /// Counts the number of low bits set in the rollsum, assuming
+    /// the digest has the bottom `CHUNK_BITS` bits set to `1`
+    /// (i.e. assuming a digest at a default bup chunk edge, as
+    /// returned by `find_chunk_edge`).
+    /// Be aware that there's a deliberate 'bug' in this function
+    /// in order to match expected return values from other bupsplit
+    /// implementations.
+    pub fn count_bits(&self) -> u32 {
+        let mut bits = CHUNK_BITS;
+        let mut rsum = self.digest() >> CHUNK_BITS;
+        // Yes, the ordering of this loop does mean that the
+        // `CHUNK_BITS+1`th bit will be ignored. This isn't actually
+        // a problem as the distribution of values will be the same,
+        // but it is unexpected.
+        loop {
+            rsum >>= 1;
+            if (rsum & 1) == 0 {
+                break;
+            }
+            bits += 1;
+        }
+        bits
     }
 }
