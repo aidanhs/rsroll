@@ -41,7 +41,7 @@ pub trait Engine {
                 return Some(i + 1);
             }
         }
-        return None;
+        None
     }
 }
 
