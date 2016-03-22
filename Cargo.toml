@@ -7,5 +7,5 @@ readme = "README.md"
 description = "Rolling checksum implementation"
 license = "BSD-3-Clause"
 
-[dependencies]
+[dev-dependencies]
 rand = "0.3"
