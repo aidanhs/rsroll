@@ -70,7 +70,7 @@ impl Bup {
     /// Find chunk edge using Bup defaults.
     ///
     /// See `Engine::find_chunk_edge_cond`.
-    pub fn find_chunk_edge<F>(&mut self, buf: &[u8]) -> Option<usize> {
+    pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<usize> {
         self.find_chunk_edge_cond(buf, |e : &Bup |
             (e.digest() & (CHUNK_SIZE - 1)) == (CHUNK_SIZE - 1)
         )
