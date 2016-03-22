@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["bup","Rolling sum and chunk splitting used by `bup` - https://github.com/bup/bup/"]],"trait":[["Engine","Rolling sum engine trait"]]});

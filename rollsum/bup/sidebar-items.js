@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["CHUNK_BITS","Default chunk size used by `bup` (log2)"],["CHUNK_SIZE","Default chunk size used by `bup`"]],"struct":[["Bup","Rolling checksum method used by `bup`"]]});
