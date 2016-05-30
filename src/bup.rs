@@ -24,7 +24,7 @@ pub struct Bup {
     s2: usize,
     window: [u8; WINDOW_SIZE],
     wofs: usize,
-    chunk_bits : u32,
+    chunk_bits: u32,
 }
 
 impl Default for Bup {
@@ -66,7 +66,7 @@ impl Bup {
     ///
     /// `chunk_bits` is number of bits that need to match in
     /// the edge condition. `CHUNK_BITS` constant is the default.
-    pub fn new_with_chunk_bits(chunk_bits : u32) -> Self {
+    pub fn new_with_chunk_bits(chunk_bits: u32) -> Self {
         assert!(chunk_bits < 32);
         Bup {
             chunk_bits: chunk_bits,
@@ -85,9 +85,9 @@ impl Bup {
     ///
     /// See `Engine::find_chunk_edge_cond`.
     pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<usize> {
-        let chunk_size = 1 << self.chunk_bits;
-        self.find_chunk_edge_cond(buf, |e : &Bup |
-            (e.digest() & (chunk_size - 1)) == (chunk_size - 1)
+        let chunk_mask = (1 << self.chunk_bits) - 1;
+        self.find_chunk_edge_cond(buf, |e: &Bup|
+            e.digest() & chunk_mask == chunk_mask
         )
     }
 
@@ -99,7 +99,7 @@ impl Bup {
     /// in order to match expected return values from other bupsplit
     /// implementations.
     pub fn count_bits(&self) -> u32 {
-        let mut bits = self.chunk_bits as u32;
+        let mut bits = self.chunk_bits;
         let mut rsum = self.digest() >> self.chunk_bits;
         // Yes, the ordering of this loop does mean that the
         // `CHUNK_BITS+1`th bit will be ignored. This isn't actually
