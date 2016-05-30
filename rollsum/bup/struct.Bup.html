@@ -11,6 +11,7 @@
 
     <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
     <link rel="stylesheet" type="text/css" href="../../main.css">
+    
 
     
     
@@ -43,10 +44,10 @@
 
     <section id='main' class="content struct">
 <h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>rollsum</a>::<wbr><a href='index.html'>bup</a>::<wbr><a class='struct' href=''>Bup</a></span><span class='out-of-band'><span id='render-detail'>
-            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
-                [<span class='inner'>&#x2212;</span>]
-            </a>
-        </span><a id='src-13' class='srclink' href='../../src/rollsum/src/bup.rs.html#22-27' title='goto source code'>[src]</a></span></h1>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a id='src-13' class='srclink' href='../../src/rollsum/src/bup.rs.html#22-28' title='goto source code'>[src]</a></span></h1>
 <pre class='rust struct'>pub struct Bup {
     // some fields omitted
 }</pre><div class='docblock'><p>Rolling checksum method used by <code>bup</code></p>
@@ -55,8 +56,14 @@
 <a href="https://github.com/bup/bup/blob/706e8d273/lib/bup/bupsplit.c">https://github.com/bup/bup/blob/706e8d273/lib/bup/bupsplit.c</a>
 <a href="https://github.com/bup/bup/blob/706e8d273/lib/bup/bupsplit.h">https://github.com/bup/bup/blob/706e8d273/lib/bup/bupsplit.h</a>
 (a bit like <a href="https://godoc.org/camlistore.org/pkg/rollsum">https://godoc.org/camlistore.org/pkg/rollsum</a>)</p>
-</div><h2 id='methods'>Methods</h2><h3 class='impl'><code>impl <a class='struct' href='../../rollsum/bup/struct.Bup.html' title='rollsum::bup::Bup'>Bup</a></code></h3><div class='impl-items'><h4 id='method.new' class='method'><code>fn <a href='#method.new' class='fnname'>new</a>() -&gt; Self</code></h4>
-<div class='docblock'><p>Create new Bup engine</p>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class='struct' href='../../rollsum/bup/struct.Bup.html' title='rollsum::bup::Bup'>Bup</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-31' class='srclink' href='../../src/rollsum/src/bup.rs.html#59-117' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.new' class='method'><code>fn <a href='#method.new' class='fnname'>new</a>() -&gt; Self</code></h4>
+<div class='docblock'><p>Create new Bup engine with default chunking settings</p>
+</div><h4 id='method.new_with_chunk_bits' class='method'><code>fn <a href='#method.new_with_chunk_bits' class='fnname'>new_with_chunk_bits</a>(chunk_bits: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a>) -&gt; Self</code></h4>
+<div class='docblock'><p>Create new Bup engine with custom chunking settings</p>
+
+<p><code>chunk_bits</code> is number of bits that need to match in
+the edge condition. <code>CHUNK_BITS</code> constant is the default.</p>
 </div><h4 id='method.find_chunk_edge' class='method'><code>fn <a href='#method.find_chunk_edge' class='fnname'>find_chunk_edge</a>(&amp;mut self, buf: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>&gt;</code></h4>
 <div class='docblock'><p>Find chunk edge using Bup defaults.</p>
 
@@ -69,13 +76,20 @@ returned by <code>find_chunk_edge</code>).
 Be aware that there&#39;s a deliberate &#39;bug&#39; in this function
 in order to match expected return values from other bupsplit
 implementations.</p>
-</div></div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/default/trait.Default.html' title='core::default::Default'>Default</a> for <a class='struct' href='../../rollsum/bup/struct.Bup.html' title='rollsum::bup::Bup'>Bup</a></code></h3><div class='impl-items'><h4 id='method.default' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/default/trait.Default.html#method.default' class='fnname'>default</a>() -&gt; Self</code></h4>
-</div><h3 class='impl'><code>impl <a class='trait' href='../../rollsum/trait.Engine.html' title='rollsum::Engine'>Engine</a> for <a class='struct' href='../../rollsum/bup/struct.Bup.html' title='rollsum::bup::Bup'>Bup</a></code></h3><div class='impl-items'><h4 id='associatedtype.Digest' class='type'><code>type Digest = <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a></code></h4>
-<h4 id='method.roll_byte' class='method'><code>fn <a href='../../rollsum/trait.Engine.html#method.roll_byte' class='fnname'>roll_byte</a>(&amp;mut self, newch: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a>)</code></h4>
-<h4 id='method.digest' class='method'><code>fn <a href='../../rollsum/trait.Engine.html#method.digest' class='fnname'>digest</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a></code></h4>
-<h4 id='method.roll' class='method'><code>fn <a href='../../rollsum/trait.Engine.html#method.roll' class='fnname'>roll</a>(&amp;mut self, buf: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>)</code></h4>
-<h4 id='method.find_chunk_edge_cond' class='method'><code>fn <a href='../../rollsum/trait.Engine.html#method.find_chunk_edge_cond' class='fnname'>find_chunk_edge_cond</a>&lt;F&gt;(&amp;mut self, buf: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>, cond: F) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>&gt; <span class='where'>where F: <a class='trait' href='https://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(&amp;Self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></span></code></h4>
-</div></section>
+</div></div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='https://doc.rust-lang.org/nightly/core/default/trait.Default.html' title='core::default::Default'>Default</a> for <a class='struct' href='../../rollsum/bup/struct.Bup.html' title='rollsum::bup::Bup'>Bup</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-20' class='srclink' href='../../src/rollsum/src/bup.rs.html#30-40' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.default' class='method'><code>fn <a href='https://doc.rust-lang.org/nightly/core/default/trait.Default.html#tymethod.default' class='fnname'>default</a>() -&gt; Self</code></h4>
+<div class='docblock'><p>Returns the &quot;default value&quot; for a type. <a href="https://doc.rust-lang.org/nightly/core/default/trait.Default.html#tymethod.default">Read more</a></p>
+</div></div><h3 class='impl'><span class='in-band'><code>impl <a class='trait' href='../../rollsum/trait.Engine.html' title='rollsum::Engine'>Engine</a> for <a class='struct' href='../../rollsum/bup/struct.Bup.html' title='rollsum::bup::Bup'>Bup</a></code></span><span class='out-of-band'><div class='ghost'></div><a id='src-23' class='srclink' href='../../src/rollsum/src/bup.rs.html#43-57' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='associatedtype.Digest' class='type'><code>type <a href='../../rollsum/trait.Engine.html#associatedtype.Digest' class='type'>Digest</a> = <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a></code></h4>
+<h4 id='method.roll_byte' class='method'><code>fn <a href='../../rollsum/trait.Engine.html#tymethod.roll_byte' class='fnname'>roll_byte</a>(&amp;mut self, newch: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a>)</code></h4>
+<div class='docblock'><p>Roll over one byte</p>
+</div><h4 id='method.digest' class='method'><code>fn <a href='../../rollsum/trait.Engine.html#tymethod.digest' class='fnname'>digest</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u32.html'>u32</a></code></h4>
+<div class='docblock'><p>Return current rolling sum digest</p>
+</div><h4 id='method.roll' class='method'><code>fn <a href='../../rollsum/trait.Engine.html#method.roll' class='fnname'>roll</a>(&amp;mut self, buf: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>)</code></h4>
+<div class='docblock'><p>Roll over a slice of bytes</p>
+</div><h4 id='method.find_chunk_edge_cond' class='method'><code>fn <a href='../../rollsum/trait.Engine.html#method.find_chunk_edge_cond' class='fnname'>find_chunk_edge_cond</a>&lt;F&gt;(&amp;mut self, buf: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>&amp;[</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.u8.html'>u8</a><a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.slice.html'>]</a>, cond: F) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>&gt; <span class='where'>where F: <a class='trait' href='https://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(&amp;Self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></span></code></h4>
+<div class='docblock'><p>Find the end of the chunk. <a href="../../rollsum/trait.Engine.html#method.find_chunk_edge_cond">Read more</a></p>
+</div></div></section>
     <section id='search' class="content hidden"></section>
 
     <section class="footer"></section>
@@ -98,6 +112,8 @@ implementations.</p>
                     <dd>Move down in search results</dd>
                     <dt>&#9166;</dt>
                     <dd>Go to active search result</dd>
+                    <dt>+</dt>
+                    <dd>Collapse/expand all sections</dd>
                 </dl>
             </div>
 
