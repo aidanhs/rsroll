@@ -10,6 +10,9 @@ extern crate test;
 /// `bup` - https://github.com/bup/bup/
 pub mod bup;
 
+pub mod gear;
+pub use gear::Gear;
+
 pub use bup::Bup;
 
 /// Rolling sum engine trait
