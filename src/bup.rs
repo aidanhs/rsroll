@@ -43,6 +43,7 @@ impl Default for Bup {
 impl Engine for Bup {
     type Digest = u32;
 
+    #[inline(always)]
     fn roll_byte(&mut self, newch: u8) {
         // Since this crate is performance ciritical, and
         // we're in strict control of `wofs`, it is justified
@@ -54,6 +55,7 @@ impl Engine for Bup {
         self.wofs = (self.wofs + 1) % WINDOW_SIZE;
     }
 
+    #[inline(always)]
     fn digest(&self) -> u32 {
         ((self.s1 as u32) << 16) | ((self.s2 as u32) & 0xffff)
     }
