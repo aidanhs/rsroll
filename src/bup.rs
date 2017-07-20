@@ -44,10 +44,13 @@ impl Engine for Bup {
     type Digest = u32;
 
     fn roll_byte(&mut self, newch: u8) {
+        // Since this crate is performance ciritical, and
+        // we're in strict control of `wofs`, it is justified
+        // to skip bound checking to increase the performance
         // https://github.com/rust-lang/rfcs/issues/811
-        let prevch = self.window[self.wofs];
+        let prevch = unsafe { *self.window.get_unchecked(self.wofs) };
         self.add(prevch, newch);
-        self.window[self.wofs] = newch;
+        unsafe { *self.window.get_unchecked_mut(self.wofs)  = newch };
         self.wofs = (self.wofs + 1) % WINDOW_SIZE;
     }
 
