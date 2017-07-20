@@ -79,6 +79,7 @@ impl Bup {
         }
     }
 
+    #[inline(always)]
     fn add(&mut self, drop: u8, add: u8) {
         self.s1 += add as usize;
         self.s1 -= drop as usize;
