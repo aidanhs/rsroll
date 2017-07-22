@@ -63,8 +63,8 @@ impl Gear {
     ///
     /// See `Engine::find_chunk_edge_cond`.
     pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<usize> {
-        let chunk_size = 1 << self.chunk_bits;
-        self.find_chunk_edge_cond(buf, |e: &Gear| (e.digest() & (chunk_size - 1)) == 0)
+        let shift  = 32 - self.chunk_bits;
+        self.find_chunk_edge_cond(buf, |e: &Gear| (e.digest() >> shift) == 0)
     }
 }
 
