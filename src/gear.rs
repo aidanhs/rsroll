@@ -1,5 +1,6 @@
 use super::Engine;
 use std::default::Default;
+use std::num::Wrapping;
 
 /// Default chunk size used by `gear`
 pub const CHUNK_SIZE: u32 = 1 << CHUNK_BITS;
@@ -9,14 +10,14 @@ pub const CHUNK_BITS: u32 = 13;
 
 
 pub struct Gear {
-    digest: u64,
+    digest: Wrapping<u32>,
     chunk_bits: u32,
 }
 
 impl Default for Gear {
     fn default() -> Self {
         Gear {
-            digest: 0,
+            digest: Wrapping(0),
             chunk_bits: CHUNK_BITS,
         }
     }
@@ -26,17 +27,17 @@ impl Default for Gear {
 include!("_gear_rand.rs");
 
 impl Engine for Gear {
-    type Digest = u64;
+    type Digest = u32;
 
     #[inline(always)]
     fn roll_byte(&mut self, b: u8) {
         self.digest = self.digest << 1;
-        self.digest += unsafe { *G.get_unchecked(b as usize) };
+        self.digest += unsafe { Wrapping(*G.get_unchecked(b as usize)) };
     }
 
     #[inline(always)]
-    fn digest(&self) -> u64 {
-        self.digest
+    fn digest(&self) -> u32 {
+        self.digest.0
     }
 }
 
