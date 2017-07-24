@@ -43,14 +43,19 @@ impl Default for Bup {
 impl Engine for Bup {
     type Digest = u32;
 
+    #[inline(always)]
     fn roll_byte(&mut self, newch: u8) {
+        // Since this crate is performance ciritical, and
+        // we're in strict control of `wofs`, it is justified
+        // to skip bound checking to increase the performance
         // https://github.com/rust-lang/rfcs/issues/811
-        let prevch = self.window[self.wofs];
+        let prevch = unsafe { *self.window.get_unchecked(self.wofs) };
         self.add(prevch, newch);
-        self.window[self.wofs] = newch;
+        unsafe { *self.window.get_unchecked_mut(self.wofs)  = newch };
         self.wofs = (self.wofs + 1) % WINDOW_SIZE;
     }
 
+    #[inline(always)]
     fn digest(&self) -> u32 {
         ((self.s1 as u32) << 16) | ((self.s2 as u32) & 0xffff)
     }
@@ -74,6 +79,7 @@ impl Bup {
         }
     }
 
+    #[inline(always)]
     fn add(&mut self, drop: u8, add: u8) {
         self.s1 += add as usize;
         self.s1 -= drop as usize;
@@ -113,5 +119,34 @@ impl Bup {
             bits += 1;
         }
         bits
+    }
+}
+
+#[cfg(feature = "bench")]
+mod tests {
+    use test::Bencher;
+    use super::Bup;
+    use rand::{Rng, SeedableRng, StdRng};
+
+    #[bench]
+    fn bup_perf_1mb(b: &mut Bencher) {
+        let mut v = vec![0x0; 1024 * 1024];
+
+        let seed: &[_] = &[1, 2, 3, 4];
+        let mut rng: StdRng = SeedableRng::from_seed(seed);
+        for i in 0..v.len() {
+            v[i] = rng.gen();
+        }
+
+        b.iter(|| {
+            let mut bup = Bup::new();
+            let mut i = 0;
+            while let Some(new_i) = bup.find_chunk_edge(&v[i..v.len()]) {
+                i += new_i;
+                if i == v.len() {
+                    break
+                }
+            }
+        });
     }
 }
