@@ -39,6 +39,13 @@ impl Engine for Gear {
     fn digest(&self) -> u32 {
         self.digest.0
     }
+
+    #[inline(always)]
+    fn reset(&mut self) {
+        let chunk_bits = self.chunk_bits;
+        *self = Default::default();
+        self.chunk_bits = chunk_bits;
+    }
 }
 
 impl Gear {
@@ -62,7 +69,7 @@ impl Gear {
     /// Find chunk edge using Gear defaults.
     ///
     /// See `Engine::find_chunk_edge_cond`.
-    pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<usize> {
+    pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<(usize, u32)> {
         let shift  = 32 - self.chunk_bits;
         self.find_chunk_edge_cond(buf, |e: &Gear| (e.digest() >> shift) == 0)
     }
@@ -87,7 +94,7 @@ mod tests {
         b.iter(|| {
             let mut gear = Gear::new();
             let mut i = 0;
-            while let Some(new_i) = gear.find_chunk_edge(&v[i..v.len()]) {
+            while let Some((new_i, _)) = gear.find_chunk_edge(&v[i..v.len()]) {
                 i += new_i;
                 if i == v.len() {
                     break;
