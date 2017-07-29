@@ -10,7 +10,7 @@ pub const CHUNK_BITS: u32 = 13;
 
 
 pub struct Gear {
-    digest: Wrapping<u32>,
+    digest: Wrapping<u64>,
     chunk_bits: u32,
 }
 
@@ -27,16 +27,16 @@ impl Default for Gear {
 include!("_gear_rand.rs");
 
 impl Engine for Gear {
-    type Digest = u32;
+    type Digest = u64;
 
     #[inline(always)]
     fn roll_byte(&mut self, b: u8) {
         self.digest = self.digest << 1;
-        self.digest += unsafe { Wrapping(*G.get_unchecked(b as usize)) };
+        self.digest += Wrapping(unsafe { *G.get_unchecked(b as usize) });
     }
 
     #[inline(always)]
-    fn digest(&self) -> u32 {
+    fn digest(&self) -> u64 {
         self.digest.0
     }
 
@@ -69,7 +69,7 @@ impl Gear {
     /// Find chunk edge using Gear defaults.
     ///
     /// See `Engine::find_chunk_edge_cond`.
-    pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<(usize, u32)> {
+    pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<(usize, u64)> {
         let shift  = 32 - self.chunk_bits;
         self.find_chunk_edge_cond(buf, |e: &Gear| (e.digest() >> shift) == 0)
     }
@@ -94,7 +94,7 @@ mod tests {
         for (i, &b) in ones.iter().enumerate() {
             gear.roll_byte(b);
             if gear.digest() == digest {
-                assert_eq!(i, 30);
+                assert_eq!(i, 63);
                 return;
             }
         }
