@@ -41,10 +41,12 @@ pub trait Engine {
     ///
     /// When edge is find, state of `self` is reset, using `reset()` method.
     ///
-    /// Return:
-    /// None - no chunk split was found
-    /// Some - offset of the last unconsumed byte of `buf` and the digest of the
-    ///        chunk. `offset` == buf.len() if the chunk ended right after whole `buf`.
+    /// Returns:
+    ///
+    /// * None - no chunk split was found
+    /// * Some - offset of the first unconsumed byte of `buf` and the digest of
+    ///   the whole chunk. `offset` == buf.len() if the chunk ended right after
+    ///   the whole `buf`.
     fn find_chunk_edge_cond<F>(&mut self, buf: &[u8], cond : F) -> Option<(usize, Self::Digest)>
     where F : Fn(&Self) -> bool {
         for (i, &b) in buf.iter().enumerate() {
