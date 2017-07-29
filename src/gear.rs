@@ -1,6 +1,7 @@
 use super::Engine;
 use std::default::Default;
 use std::num::Wrapping;
+use std::mem;
 
 /// Default chunk size used by `gear`
 pub const CHUNK_SIZE: u32 = 1 << CHUNK_BITS;
@@ -70,7 +71,12 @@ impl Gear {
     ///
     /// See `Engine::find_chunk_edge_cond`.
     pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<(usize, u64)> {
-        let shift  = 32 - self.chunk_bits;
+        const DIGEST_SIZE: usize = 64;
+        debug_assert_eq!(
+            mem::size_of::<<Self as Engine>::Digest>() * 8,
+            DIGEST_SIZE
+            );
+        let shift = DIGEST_SIZE as u32 - self.chunk_bits;
         self.find_chunk_edge_cond(buf, |e: &Gear| (e.digest() >> shift) == 0)
     }
 }
