@@ -75,31 +75,59 @@ impl Gear {
     }
 }
 
-#[cfg(feature = "bench")]
+#[cfg(test)]
 mod tests {
-    use test::Bencher;
-    use super::Gear;
-    use rand::{Rng, SeedableRng, StdRng};
+    use super::{Gear, Engine};
 
-    #[bench]
-    fn gear_perf_1mb(b: &mut Bencher) {
-        let mut v = vec![0x0; 1024 * 1024];
+    #[test]
+    fn effective_window_size() {
+        let ones = vec![0x1; 1024];
+        let zeroes = vec![0x0; 1024];
 
-        let seed: &[_] = &[1, 2, 3, 4];
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        for i in 0..v.len() {
-            v[i] = rng.gen();
+        let mut gear = Gear::new();
+        gear.roll(&ones);
+        let digest = gear.digest();
+
+        let mut gear = Gear::new();
+        gear.roll(&zeroes);
+
+        for (i, &b) in ones.iter().enumerate() {
+            gear.roll_byte(b);
+            if gear.digest() == digest {
+                assert_eq!(i, 30);
+                return;
+            }
         }
 
-        b.iter(|| {
-            let mut gear = Gear::new();
-            let mut i = 0;
-            while let Some((new_i, _)) = gear.find_chunk_edge(&v[i..v.len()]) {
-                i += new_i;
-                if i == v.len() {
-                    break;
-                }
+        panic!("matching digest not found");
+    }
+
+    #[cfg(feature = "bench")]
+    mod bench {
+    use test::Bencher;
+    use rand::{Rng, SeedableRng, StdRng};
+    use super::*;
+
+        #[bench]
+        fn gear_perf_1mb(b: &mut Bencher) {
+            let mut v = vec![0x0; 1024 * 1024];
+
+            let seed: &[_] = &[1, 2, 3, 4];
+            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            for i in 0..v.len() {
+                v[i] = rng.gen();
             }
-        });
+
+            b.iter(|| {
+                let mut gear = Gear::new();
+                let mut i = 0;
+                while let Some((new_i, _)) = gear.find_chunk_edge(&v[i..v.len()]) {
+                    i += new_i;
+                    if i == v.len() {
+                        break;
+                    }
+                }
+            });
+        }
     }
 }
