@@ -39,7 +39,7 @@ fn bup_selftest()
 pub fn test_data_1mb() -> Vec<u8> {
     let mut v = vec![0x0; 1024 * 1024];
 
-    let seed: &[_] = &[1, 2, 3, 4];
+    let seed: &[_] = &[2, 1, 255, 70];
     let mut rng: StdRng = SeedableRng::from_seed(seed);
     for i in 0..v.len() {
         v[i] = rng.gen();
