@@ -67,7 +67,7 @@ impl FastCDC {
             DIGEST_SIZE
             );
 
-        const SPREAD_BITS: u32 = 2;
+        const SPREAD_BITS: u32 = 3;
         const WINDOW_SIZE: usize = 64;
 
         let min_shift = DIGEST_SIZE as u32 - self.gear.chunk_bits - SPREAD_BITS;
