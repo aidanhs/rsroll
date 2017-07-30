@@ -12,7 +12,7 @@ pub const CHUNK_BITS: u32 = 13;
 
 pub struct Gear {
     digest: Wrapping<u64>,
-    chunk_bits: u32,
+    pub chunk_bits: u32,
 }
 
 impl Default for Gear {
