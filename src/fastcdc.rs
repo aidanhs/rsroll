@@ -24,7 +24,7 @@ impl Engine for FastCDC {
 
     #[inline(always)]
     fn roll_byte(&mut self, b: u8) {
-        self.gear.roll_byte(b)
+        self.gear.roll_byte(b);
     }
 
     #[inline(always)]
@@ -95,7 +95,7 @@ impl FastCDC {
                 buf = &buf[skip_bytes as usize..];
             }
 
-            // ignore eges in bytes that are smaller than min_size
+            // ignore edges in bytes that are smaller than min_size
             if self.current_chunk_size < min_size {
                 let roll_bytes = cmp::min(min_size - self.current_chunk_size,
                                           buf.len() as u64);
@@ -117,8 +117,8 @@ impl FastCDC {
                 }
 
                 self.current_chunk_size += roll_bytes;
-                buf = &buf[roll_bytes as usize..];
                 cur_offset += roll_bytes as usize;
+                buf = &buf[roll_bytes as usize..];
             }
 
             // roll through late bytes with higher probability
@@ -143,6 +143,7 @@ impl FastCDC {
                 self.reset();
                 return Some(result);
             }
+
         }
     }
 }
@@ -176,22 +177,97 @@ mod tests {
 
     #[cfg(feature = "bench")]
     mod bench {
-    use test::Bencher;
-    use rand::{Rng, SeedableRng, StdRng};
-    use super::*;
+        use test::Bencher;
+        use super::*;
+
+        use tests::test_data_1mb;
 
         #[bench]
-        fn fastcdc_perf_1mb(b: &mut Bencher) {
-            let mut v = vec![0x0; 1024 * 1024];
-
-            let seed: &[_] = &[1, 2, 3, 4];
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
-            for i in 0..v.len() {
-                v[i] = rng.gen();
-            }
+        fn perf_1mb(b: &mut Bencher) {
+            let v = test_data_1mb();
 
             b.iter(|| {
                 let mut gear = FastCDC::new();
+                let mut i = 0;
+                while let Some((new_i, _)) = gear.find_chunk_edge(&v[i..v.len()]) {
+                    i += new_i;
+                    if i == v.len() {
+                        break;
+                    }
+                }
+            });
+        }
+
+        #[bench]
+        fn perf_1mb_16k_chunks(b: &mut Bencher) {
+            let v = test_data_1mb();
+
+            b.iter(|| {
+                let mut gear = FastCDC::new_with_chunk_bits(14);
+                let mut i = 0;
+                while let Some((new_i, _)) = gear.find_chunk_edge(&v[i..v.len()]) {
+                    i += new_i;
+                    if i == v.len() {
+                        break;
+                    }
+                }
+            });
+        }
+        #[bench]
+        fn perf_1mb_64k_chunks(b: &mut Bencher) {
+            let v = test_data_1mb();
+
+            b.iter(|| {
+                let mut gear = FastCDC::new_with_chunk_bits(16);
+                let mut i = 0;
+                while let Some((new_i, _)) = gear.find_chunk_edge(&v[i..v.len()]) {
+                    i += new_i;
+                    if i == v.len() {
+                        break;
+                    }
+                }
+            });
+        }
+
+        #[bench]
+        fn perf_1mb_128k_chunks(b: &mut Bencher) {
+            let v = test_data_1mb();
+
+            b.iter(|| {
+                let mut gear = FastCDC::new_with_chunk_bits(17);
+                let mut i = 0;
+                while let Some((new_i, _)) = gear.find_chunk_edge(&v[i..v.len()]) {
+                    i += new_i;
+                    if i == v.len() {
+                        break;
+                    }
+                }
+            });
+        }
+
+
+        #[bench]
+        fn perf_1mb_256k_chunks(b: &mut Bencher) {
+            let v = test_data_1mb();
+
+            b.iter(|| {
+                let mut gear = FastCDC::new_with_chunk_bits(18);
+                let mut i = 0;
+                while let Some((new_i, _)) = gear.find_chunk_edge(&v[i..v.len()]) {
+                    i += new_i;
+                    if i == v.len() {
+                        break;
+                    }
+                }
+            });
+        }
+
+        #[bench]
+        fn perf_1mb_512k_chunks(b: &mut Bencher) {
+            let v = test_data_1mb();
+
+            b.iter(|| {
+                let mut gear = FastCDC::new_with_chunk_bits(19);
                 let mut i = 0;
                 while let Some((new_i, _)) = gear.find_chunk_edge(&v[i..v.len()]) {
                     i += new_i;

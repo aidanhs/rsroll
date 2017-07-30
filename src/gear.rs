@@ -111,19 +111,14 @@ mod tests {
 
     #[cfg(feature = "bench")]
     mod bench {
-    use test::Bencher;
-    use rand::{Rng, SeedableRng, StdRng};
-    use super::*;
+        use test::Bencher;
+        use super::*;
+
+        use tests::test_data_1mb;
 
         #[bench]
-        fn gear_perf_1mb(b: &mut Bencher) {
-            let mut v = vec![0x0; 1024 * 1024];
-
-            let seed: &[_] = &[1, 2, 3, 4];
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
-            for i in 0..v.len() {
-                v[i] = rng.gen();
-            }
+        fn perf_1mb(b: &mut Bencher) {
+            let v = test_data_1mb();
 
             b.iter(|| {
                 let mut gear = Gear::new();
