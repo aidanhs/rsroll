@@ -9,28 +9,34 @@ extern crate test;
 /// Rolling sum and chunk splitting used by
 /// `bup` - https://github.com/bup/bup/
 pub mod bup;
+pub use bup::Bup;
 
 pub mod gear;
 pub use gear::Gear;
 
-pub use bup::Bup;
+pub mod fastcdc;
+pub use fastcdc::FastCDC;
 
 /// Rolling sum engine trait
 pub trait Engine {
     type Digest;
 
     /// Roll over one byte
+    #[inline(always)]
     fn roll_byte(&mut self, byte: u8);
 
     /// Roll over a slice of bytes
+    #[inline(always)]
     fn roll(&mut self, buf: &[u8]) {
         buf.iter().map(|&b| self.roll_byte(b)).count();
     }
 
     /// Return current rolling sum digest
+    #[inline(always)]
     fn digest(&self) -> Self::Digest;
 
     /// Resets the internal state
+    #[inline(always)]
     fn reset(&mut self);
 
     /// Find the end of the chunk.

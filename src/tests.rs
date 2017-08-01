@@ -35,3 +35,15 @@ fn bup_selftest()
     assert_eq!(sum2a, sum2b);
     assert_eq!(sum3a, sum3b);
 }
+
+pub fn test_data_1mb() -> Vec<u8> {
+    let mut v = vec![0x0; 1024 * 1024];
+
+    let seed: &[_] = &[2, 1, 255, 70];
+    let mut rng: StdRng = SeedableRng::from_seed(seed);
+    for i in 0..v.len() {
+        v[i] = rng.gen();
+    }
+
+    v
+}

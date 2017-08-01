@@ -12,5 +12,11 @@ license = "BSD-3-Clause"
 default = []
 bench = []
 
+[profile.bench]
+opt-level = 3
+debug = true
+lto = true
+debug-assertions = false
+
 [dev-dependencies]
 rand = "0.3"
