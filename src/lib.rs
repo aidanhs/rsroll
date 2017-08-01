@@ -30,23 +30,32 @@ pub trait Engine {
     /// Return current rolling sum digest
     fn digest(&self) -> Self::Digest;
 
+    /// Resets the internal state
+    fn reset(&mut self);
+
     /// Find the end of the chunk.
     ///
     /// Feed engine bytes from `buf` and stop when chunk split was found.
     ///
     /// Use `cond` function as chunk split condition.
     ///
-    /// Return:
-    /// None - no chunk split was found
-    /// Some(offset) - offset of the first unconsumed byte of `buf`.
-    ///   offset == buf.len() if the chunk ended right after whole `buf`.
-    fn find_chunk_edge_cond<F>(&mut self, buf: &[u8], cond : F) -> Option<usize>
+    /// When edge is find, state of `self` is reset, using `reset()` method.
+    ///
+    /// Returns:
+    ///
+    /// * None - no chunk split was found
+    /// * Some - offset of the first unconsumed byte of `buf` and the digest of
+    ///   the whole chunk. `offset` == buf.len() if the chunk ended right after
+    ///   the whole `buf`.
+    fn find_chunk_edge_cond<F>(&mut self, buf: &[u8], cond : F) -> Option<(usize, Self::Digest)>
     where F : Fn(&Self) -> bool {
         for (i, &b) in buf.iter().enumerate() {
             self.roll_byte(b);
 
             if cond(self) {
-                return Some(i + 1);
+                let digest = self.digest();
+                self.reset();
+                return Some((i + 1, digest));
             }
         }
         None

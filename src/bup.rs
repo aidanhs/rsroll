@@ -59,6 +59,14 @@ impl Engine for Bup {
     fn digest(&self) -> u32 {
         ((self.s1 as u32) << 16) | ((self.s2 as u32) & 0xffff)
     }
+
+    #[inline]
+    fn reset(&mut self) {
+        *self = Bup {
+            chunk_bits: self.chunk_bits,
+            .. Default::default()
+        }
+    }
 }
 
 impl Bup {
@@ -90,7 +98,7 @@ impl Bup {
     /// Find chunk edge using Bup defaults.
     ///
     /// See `Engine::find_chunk_edge_cond`.
-    pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<usize> {
+    pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<(usize, u32)> {
         let chunk_mask = (1 << self.chunk_bits) - 1;
         self.find_chunk_edge_cond(buf, |e: &Bup|
             e.digest() & chunk_mask == chunk_mask
@@ -141,7 +149,7 @@ mod tests {
         b.iter(|| {
             let mut bup = Bup::new();
             let mut i = 0;
-            while let Some(new_i) = bup.find_chunk_edge(&v[i..v.len()]) {
+            while let Some((new_i, _)) = bup.find_chunk_edge(&v[i..v.len()]) {
                 i += new_i;
                 if i == v.len() {
                     break
