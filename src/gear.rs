@@ -1,6 +1,7 @@
 use super::Engine;
 use std::default::Default;
 use std::num::Wrapping;
+use std::mem;
 
 /// Default chunk size used by `gear`
 pub const CHUNK_SIZE: u32 = 1 << CHUNK_BITS;
@@ -10,7 +11,7 @@ pub const CHUNK_BITS: u32 = 13;
 
 
 pub struct Gear {
-    digest: Wrapping<u32>,
+    digest: Wrapping<u64>,
     chunk_bits: u32,
 }
 
@@ -27,16 +28,16 @@ impl Default for Gear {
 include!("_gear_rand.rs");
 
 impl Engine for Gear {
-    type Digest = u32;
+    type Digest = u64;
 
     #[inline(always)]
     fn roll_byte(&mut self, b: u8) {
         self.digest = self.digest << 1;
-        self.digest += unsafe { Wrapping(*G.get_unchecked(b as usize)) };
+        self.digest += Wrapping(unsafe { *G.get_unchecked(b as usize) });
     }
 
     #[inline(always)]
-    fn digest(&self) -> u32 {
+    fn digest(&self) -> u64 {
         self.digest.0
     }
 
@@ -70,37 +71,70 @@ impl Gear {
     /// Find chunk edge using Gear defaults.
     ///
     /// See `Engine::find_chunk_edge_cond`.
-    pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<(usize, u32)> {
-        let shift  = 32 - self.chunk_bits;
+    pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<(usize, u64)> {
+        const DIGEST_SIZE: usize = 64;
+        debug_assert_eq!(
+            mem::size_of::<<Self as Engine>::Digest>() * 8,
+            DIGEST_SIZE
+            );
+        let shift = DIGEST_SIZE as u32 - self.chunk_bits;
         self.find_chunk_edge_cond(buf, |e: &Gear| (e.digest() >> shift) == 0)
     }
 }
 
-#[cfg(feature = "bench")]
+#[cfg(test)]
 mod tests {
-    use test::Bencher;
-    use super::Gear;
-    use rand::{Rng, SeedableRng, StdRng};
+    use super::{Gear, Engine};
 
-    #[bench]
-    fn gear_perf_1mb(b: &mut Bencher) {
-        let mut v = vec![0x0; 1024 * 1024];
+    #[test]
+    fn effective_window_size() {
+        let ones = vec![0x1; 1024];
+        let zeroes = vec![0x0; 1024];
 
-        let seed: &[_] = &[1, 2, 3, 4];
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        for i in 0..v.len() {
-            v[i] = rng.gen();
+        let mut gear = Gear::new();
+        gear.roll(&ones);
+        let digest = gear.digest();
+
+        let mut gear = Gear::new();
+        gear.roll(&zeroes);
+
+        for (i, &b) in ones.iter().enumerate() {
+            gear.roll_byte(b);
+            if gear.digest() == digest {
+                assert_eq!(i, 63);
+                return;
+            }
         }
 
-        b.iter(|| {
-            let mut gear = Gear::new();
-            let mut i = 0;
-            while let Some((new_i, _)) = gear.find_chunk_edge(&v[i..v.len()]) {
-                i += new_i;
-                if i == v.len() {
-                    break;
-                }
+        panic!("matching digest not found");
+    }
+
+    #[cfg(feature = "bench")]
+    mod bench {
+    use test::Bencher;
+    use rand::{Rng, SeedableRng, StdRng};
+    use super::*;
+
+        #[bench]
+        fn gear_perf_1mb(b: &mut Bencher) {
+            let mut v = vec![0x0; 1024 * 1024];
+
+            let seed: &[_] = &[1, 2, 3, 4];
+            let mut rng: StdRng = SeedableRng::from_seed(seed);
+            for i in 0..v.len() {
+                v[i] = rng.gen();
             }
-        });
+
+            b.iter(|| {
+                let mut gear = Gear::new();
+                let mut i = 0;
+                while let Some((new_i, _)) = gear.find_chunk_edge(&v[i..v.len()]) {
+                    i += new_i;
+                    if i == v.len() {
+                        break;
+                    }
+                }
+            });
+        }
     }
 }
