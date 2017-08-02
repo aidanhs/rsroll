@@ -40,11 +40,12 @@ impl Engine for Gear {
         self.digest.0
     }
 
-    #[inline(always)]
+    #[inline]
     fn reset(&mut self) {
-        let chunk_bits = self.chunk_bits;
-        *self = Default::default();
-        self.chunk_bits = chunk_bits;
+        *self = Gear {
+            chunk_bits: self.chunk_bits,
+            .. Default::default()
+        }
     }
 }
 

@@ -60,11 +60,12 @@ impl Engine for Bup {
         ((self.s1 as u32) << 16) | ((self.s2 as u32) & 0xffff)
     }
 
-    #[inline(always)]
+    #[inline]
     fn reset(&mut self) {
-        let chunk_bits = self.chunk_bits;
-        *self = Default::default();
-        self.chunk_bits = chunk_bits;
+        *self = Bup {
+            chunk_bits: self.chunk_bits,
+            .. Default::default()
+        }
     }
 }
 
