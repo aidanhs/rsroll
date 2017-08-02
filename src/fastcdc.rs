@@ -32,7 +32,7 @@ impl Engine for FastCDC {
         self.gear.digest()
     }
 
-    #[inline(always)]
+    #[inline]
     fn reset(&mut self) {
         self.gear.reset();
         self.current_chunk_size = 0;
@@ -45,7 +45,7 @@ impl FastCDC {
         Default::default()
     }
 
-    /// Create new Gear engine with custom chunking settings
+    /// Create new `FastCDC` engine with custom chunking settings
     ///
     /// `chunk_bits` is number of bits that need to match in
     /// the edge condition. `CHUNK_BITS` constant is the default.
@@ -56,7 +56,7 @@ impl FastCDC {
         }
     }
 
-    /// Find chunk edge using Gear defaults.
+    /// Find chunk edge using `FastCDC` defaults.
     ///
     /// See `Engine::find_chunk_edge_cond`.
     pub fn find_chunk_edge(&mut self, mut buf: &[u8]) -> Option<(usize, u64)> {
