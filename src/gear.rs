@@ -1,6 +1,5 @@
-use super::Engine;
+use {RollingHash, CDC};
 use std::default::Default;
-use std::num::Wrapping;
 use std::mem;
 
 /// Default chunk size used by `gear`
@@ -11,14 +10,14 @@ pub const CHUNK_BITS: u32 = 13;
 
 
 pub struct Gear {
-    digest: Wrapping<u64>,
-    chunk_bits: u32,
+    digest: u64,
+    pub chunk_bits: u32,
 }
 
 impl Default for Gear {
     fn default() -> Self {
         Gear {
-            digest: Wrapping(0),
+            digest: 0,
             chunk_bits: CHUNK_BITS,
         }
     }
@@ -27,21 +26,17 @@ impl Default for Gear {
 
 include!("_gear_rand.rs");
 
-impl Engine for Gear {
+impl RollingHash for Gear {
     type Digest = u64;
 
-    #[inline(always)]
     fn roll_byte(&mut self, b: u8) {
-        self.digest = self.digest << 1;
-        self.digest += Wrapping(unsafe { *G.get_unchecked(b as usize) });
+        self.digest = (self.digest << 1).wrapping_add(unsafe { *G.get_unchecked(b as usize) });
     }
 
-    #[inline(always)]
     fn digest(&self) -> u64 {
-        self.digest.0
+        self.digest
     }
 
-    #[inline]
     fn reset(&mut self) {
         *self = Gear {
             chunk_bits: self.chunk_bits,
@@ -67,24 +62,37 @@ impl Gear {
             ..Default::default()
         }
     }
+}
 
+impl CDC for Gear {
     /// Find chunk edge using Gear defaults.
     ///
     /// See `Engine::find_chunk_edge_cond`.
-    pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<(usize, u64)> {
+    fn find_chunk<'a>(&mut self, buf: &'a [u8]) -> Option<(&'a [u8], &'a [u8])> {
         const DIGEST_SIZE: usize = 64;
         debug_assert_eq!(
-            mem::size_of::<<Self as Engine>::Digest>() * 8,
+            mem::size_of::<<Self as RollingHash>::Digest>() * 8,
             DIGEST_SIZE
             );
-        let shift = DIGEST_SIZE as u32 - self.chunk_bits;
-        self.find_chunk_edge_cond(buf, |e: &Gear| (e.digest() >> shift) == 0)
+        let mask = !0u64 << (DIGEST_SIZE as u32 - self.chunk_bits);
+
+        for (i, &b) in buf.iter().enumerate() {
+            self.roll_byte(b);
+
+            if self.digest() & mask == 0 {
+                self.reset();
+                return Some((&buf[..i+1], &buf[i+1..]));
+            }
+        }
+        None
     }
 }
 
+
 #[cfg(test)]
 mod tests {
-    use super::{Gear, Engine};
+    use super::Gear;
+    use {RollingHash};
 
     #[test]
     fn effective_window_size() {
@@ -111,28 +119,23 @@ mod tests {
 
     #[cfg(feature = "bench")]
     mod bench {
-    use test::Bencher;
-    use rand::{Rng, SeedableRng, StdRng};
-    use super::*;
+        use test::Bencher;
+        use super::*;
+        use CDC;
+
+        use tests::test_data_1mb;
 
         #[bench]
-        fn gear_perf_1mb(b: &mut Bencher) {
-            let mut v = vec![0x0; 1024 * 1024];
-
-            let seed: &[_] = &[1, 2, 3, 4];
-            let mut rng: StdRng = SeedableRng::from_seed(seed);
-            for i in 0..v.len() {
-                v[i] = rng.gen();
-            }
+        fn perf_1mb(b: &mut Bencher) {
+            let v = test_data_1mb();
+            b.bytes = v.len() as u64;
 
             b.iter(|| {
-                let mut gear = Gear::new();
-                let mut i = 0;
-                while let Some((new_i, _)) = gear.find_chunk_edge(&v[i..v.len()]) {
-                    i += new_i;
-                    if i == v.len() {
-                        break;
-                    }
+                let mut cdc = Gear::new();
+                let mut buf = v.as_slice();
+
+                while let Some((_last, rest)) = cdc.find_chunk(buf) {
+                    buf = rest;
                 }
             });
         }

@@ -1,4 +1,4 @@
-use super::Engine;
+use {RollingHash, CDC};
 use std::default::Default;
 
 const WINDOW_BITS: usize = 6;
@@ -40,7 +40,7 @@ impl Default for Bup {
 }
 
 
-impl Engine for Bup {
+impl RollingHash for Bup {
     type Digest = u32;
 
     #[inline(always)]
@@ -69,6 +69,22 @@ impl Engine for Bup {
     }
 }
 
+impl CDC for Bup {
+    fn find_chunk<'a>(&mut self, buf: &'a [u8]) -> Option<(&'a [u8], &'a [u8])> {
+        let chunk_mask = (1 << self.chunk_bits) - 1;
+        for (i, &b) in buf.iter().enumerate() {
+            self.roll_byte(b);
+
+            if self.digest() & chunk_mask == chunk_mask {
+                self.reset();
+                return Some((&buf[..i+1], &buf[i+1..]));
+            }
+        }
+        None
+    }
+}
+
+
 impl Bup {
     /// Create new Bup engine with default chunking settings
     pub fn new() -> Self {
@@ -93,16 +109,6 @@ impl Bup {
         self.s1 -= drop as usize;
         self.s2 += self.s1;
         self.s2 -= WINDOW_SIZE * (drop as usize + CHAR_OFFSET);
-    }
-
-    /// Find chunk edge using Bup defaults.
-    ///
-    /// See `Engine::find_chunk_edge_cond`.
-    pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<(usize, u32)> {
-        let chunk_mask = (1 << self.chunk_bits) - 1;
-        self.find_chunk_edge_cond(buf, |e: &Bup|
-            e.digest() & chunk_mask == chunk_mask
-        )
     }
 
     /// Counts the number of low bits set in the rollsum, assuming
@@ -133,27 +139,20 @@ impl Bup {
 #[cfg(feature = "bench")]
 mod tests {
     use test::Bencher;
-    use super::Bup;
-    use rand::{Rng, SeedableRng, StdRng};
+    use super::{Bup, CDC};
+    use tests::test_data_1mb;
 
     #[bench]
     fn bup_perf_1mb(b: &mut Bencher) {
-        let mut v = vec![0x0; 1024 * 1024];
-
-        let seed: &[_] = &[1, 2, 3, 4];
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        for i in 0..v.len() {
-            v[i] = rng.gen();
-        }
+        let v = test_data_1mb();
+        b.bytes = v.len() as u64;
 
         b.iter(|| {
-            let mut bup = Bup::new();
-            let mut i = 0;
-            while let Some((new_i, _)) = bup.find_chunk_edge(&v[i..v.len()]) {
-                i += new_i;
-                if i == v.len() {
-                    break
-                }
+            let mut cdc = Bup::new();
+            let mut buf = v.as_slice();
+
+            while let Some((_last, rest)) = cdc.find_chunk(buf) {
+                buf = rest;
             }
         });
     }

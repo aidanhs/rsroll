@@ -9,57 +9,47 @@ extern crate test;
 /// Rolling sum and chunk splitting used by
 /// `bup` - https://github.com/bup/bup/
 pub mod bup;
+pub use bup::Bup;
 
 pub mod gear;
 pub use gear::Gear;
 
-pub use bup::Bup;
-
 /// Rolling sum engine trait
-pub trait Engine {
+pub trait RollingHash {
     type Digest;
 
-    /// Roll over one byte
-    fn roll_byte(&mut self, byte: u8);
+    #[inline(always)]
+    fn roll_byte(&mut self, buf: u8);
 
     /// Roll over a slice of bytes
+    #[inline(always)]
     fn roll(&mut self, buf: &[u8]) {
         buf.iter().map(|&b| self.roll_byte(b)).count();
     }
 
     /// Return current rolling sum digest
+    #[inline(always)]
     fn digest(&self) -> Self::Digest;
 
     /// Resets the internal state
+    #[inline(always)]
     fn reset(&mut self);
+}
 
+trait CDC {
     /// Find the end of the chunk.
     ///
-    /// Feed engine bytes from `buf` and stop when chunk split was found.
-    ///
-    /// Use `cond` function as chunk split condition.
-    ///
-    /// When edge is find, state of `self` is reset, using `reset()` method.
+    /// When edge is find, state of CDC should automatically be reset.
     ///
     /// Returns:
     ///
-    /// * None - no chunk split was found
-    /// * Some - offset of the first unconsumed byte of `buf` and the digest of
-    ///   the whole chunk. `offset` == buf.len() if the chunk ended right after
-    ///   the whole `buf`.
-    fn find_chunk_edge_cond<F>(&mut self, buf: &[u8], cond : F) -> Option<(usize, Self::Digest)>
-    where F : Fn(&Self) -> bool {
-        for (i, &b) in buf.iter().enumerate() {
-            self.roll_byte(b);
-
-            if cond(self) {
-                let digest = self.digest();
-                self.reset();
-                return Some((i + 1, digest));
-            }
-        }
-        None
-    }
+    /// * None - no chunk split was found, and the whole `buf` belongs
+    ///          to the current chunk.
+    /// * Some - chunk edge was found, and it is splitting the `buf`
+    ///          in two pieces. The second one has not yet been searched
+    ///          for more chunks.
+    #[inline]
+    fn find_chunk<'a>(&mut self, buf: &'a [u8]) -> Option<(&'a [u8], &'a [u8])>;
 }
 
 #[cfg(test)]
