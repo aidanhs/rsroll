@@ -76,14 +76,17 @@ impl CDC for Gear {
             );
         let mask = !0u64 << (DIGEST_SIZE as u32 - self.chunk_bits);
 
-        for (i, &b) in buf.iter().enumerate() {
-            self.roll_byte(b);
+        let mut digest = self.digest;
 
-            if self.digest() & mask == 0 {
+        for (i, &b) in buf.iter().enumerate() {
+            digest = (digest << 1).wrapping_add(unsafe { *G.get_unchecked(b as usize) });
+
+            if digest & mask == 0 {
                 self.reset();
                 return Some((&buf[..i+1], &buf[i+1..]));
             }
         }
+        self.digest = digest;
         None
     }
 }
