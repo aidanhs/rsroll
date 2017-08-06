@@ -33,6 +33,17 @@ impl RollingHash for Gear {
         self.digest = (self.digest << 1).wrapping_add(unsafe { *G.get_unchecked(b as usize) });
     }
 
+    // due to rustc failing to optimize
+    fn roll(&mut self, buf: &[u8]) {
+        let mut digest = self.digest;
+        buf.iter().map(
+            |&b| {
+                digest = (digest << 1).wrapping_add(unsafe { *G.get_unchecked(b as usize) });
+            }
+            ).count();
+        self.digest = digest;
+    }
+
     fn digest(&self) -> u64 {
         self.digest
     }
@@ -62,6 +73,41 @@ impl Gear {
             ..Default::default()
         }
     }
+
+    pub fn find_chunk_edge_cond<'a, F>(&mut self, buf: &'a [u8], cond : F) -> Option<(&'a [u8], &'a [u8])>
+        where F : Fn(&Self) -> bool {
+            let mut digest = self.digest;
+
+            for (i, &b) in buf.iter().enumerate() {
+                digest = (digest << 1).wrapping_add(unsafe { *G.get_unchecked(b as usize) });
+
+                self.digest = digest;
+                if cond(self) {
+                    self.reset();
+                    return Some((&buf[..i+1], &buf[i+1..]));
+                }
+            }
+            self.digest = digest;
+            None
+        }
+
+
+    pub fn find_chunk_mask<'a>(&mut self, buf: &'a [u8], mask : u64) -> Option<(&'a [u8], &'a [u8])> {
+            let mut digest = self.digest;
+
+            for (i, &b) in buf.iter().enumerate() {
+                digest = (digest << 1).wrapping_add(unsafe { *G.get_unchecked(b as usize) });
+
+                if digest & mask == 0 {
+                    self.reset();
+                    return Some((&buf[..i+1], &buf[i+1..]));
+                }
+            }
+            self.digest = digest;
+            None
+        }
+
+
 }
 
 impl CDC for Gear {
@@ -89,6 +135,7 @@ impl CDC for Gear {
         self.digest = digest;
         None
     }
+
 }
 
 

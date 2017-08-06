@@ -14,6 +14,9 @@ pub use bup::Bup;
 pub mod gear;
 pub use gear::Gear;
 
+pub mod fastcdc;
+pub use fastcdc::FastCDC;
+
 /// Rolling sum engine trait
 pub trait RollingHash {
     type Digest;
@@ -45,6 +48,7 @@ trait CDC {
     ///          in two pieces. The second one has not yet been searched
     ///          for more chunks.
     fn find_chunk<'a>(&mut self, buf: &'a [u8]) -> Option<(&'a [u8], &'a [u8])>;
+
 }
 
 #[cfg(test)]
