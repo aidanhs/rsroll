@@ -176,12 +176,12 @@ mod tests {
         use tests::test_data_1mb;
 
         #[bench]
-        fn perf_1mb(b: &mut Bencher) {
+        fn perf_1mb_004k_chunks(b: &mut Bencher) {
             let v = test_data_1mb();
             b.bytes = v.len() as u64;
 
             b.iter(|| {
-                let mut cdc = Gear::new();
+                let mut cdc = Gear::new_with_chunk_bits(12);
                 let mut buf = v.as_slice();
 
                 while let Some((_last, rest)) = cdc.find_chunk(buf) {
@@ -189,5 +189,37 @@ mod tests {
                 }
             });
         }
+
+        #[bench]
+        fn perf_1mb_008k_chunks(b: &mut Bencher) {
+            let v = test_data_1mb();
+            b.bytes = v.len() as u64;
+
+            b.iter(|| {
+                let mut cdc = Gear::new_with_chunk_bits(13);
+                let mut buf = v.as_slice();
+
+                while let Some((_last, rest)) = cdc.find_chunk(buf) {
+                    buf = rest;
+                }
+            });
+        }
+
+        #[bench]
+        fn perf_1mb_064k_chunks(b: &mut Bencher) {
+            let v = test_data_1mb();
+            b.bytes = v.len() as u64;
+
+            b.iter(|| {
+                let mut cdc = Gear::new_with_chunk_bits(16);
+                let mut buf = v.as_slice();
+
+                while let Some((_last, rest)) = cdc.find_chunk(buf) {
+                    buf = rest;
+                }
+            });
+        }
+
+
     }
 }
