@@ -2,18 +2,46 @@ use super::{RollingHash, CDC};
 use std::default::Default;
 use std::cmp;
 use std::mem;
-use Gear;
+use {gear, Gear};
+
+fn get_masks(avg_size: usize, nc_level: usize, seed: u64) -> (u64, u64) {
+    let bits = (avg_size.next_power_of_two() - 1).count_ones();
+    if bits == 13 {
+        // From the paper
+        return (0x0003590703530000, 0x0000d90003530000);
+    }
+    let mut mask = 0u64;
+    let mut v = seed;
+    let a = 6364136223846793005;
+    let c = 1442695040888963407;
+    while mask.count_ones() < bits - nc_level as u32 {
+        v = v.wrapping_mul(a).wrapping_add(c);
+        mask = (mask | 1).rotate_left(v as u32 & 0x3f);
+    }
+    let mask_long = mask;
+    while mask.count_ones() < bits + nc_level as u32 {
+        v = v.wrapping_mul(a).wrapping_add(c);
+        mask = (mask | 1).rotate_left(v as u32 & 0x3f);
+    }
+    let mask_short = mask;
+    (mask_short, mask_long)
+}
 
 pub struct FastCDC {
     current_chunk_size: u64,
     gear: Gear,
+    mask_long: u64,
+    mask_short: u64,
 }
 
 impl Default for FastCDC {
     fn default() -> Self {
+        let (mask_short, mask_long) = get_masks(1 << gear::CHUNK_BITS, 2, 0);
         FastCDC {
             current_chunk_size: 0,
             gear: Gear::default(),
+            mask_short: mask_short,
+            mask_long: mask_long,
         }
     }
 }
@@ -47,9 +75,12 @@ impl FastCDC {
     /// `chunk_bits` is number of bits that need to match in
     /// the edge condition. `CHUNK_BITS` constant is the default.
     pub fn new_with_chunk_bits(chunk_bits: u32) -> Self {
+        let (mask_short, mask_long) = get_masks(1 << chunk_bits, 2, 0);
         Self {
             current_chunk_size: 0,
             gear: Gear::new_with_chunk_bits(chunk_bits),
+            mask_short: mask_short,
+            mask_long: mask_long,
         }
     }
 }
@@ -69,11 +100,8 @@ impl CDC for FastCDC {
         const SPREAD_BITS: u32 = 3;
         const WINDOW_SIZE: usize = 64;
 
-        let min_shift = DIGEST_SIZE as u32 - self.gear.chunk_bits - SPREAD_BITS;
-        let max_shift = DIGEST_SIZE as u32 - self.gear.chunk_bits + SPREAD_BITS;
-
-        let min_mask = !0u64 << min_shift;
-        let max_mask = !0u64 << max_shift;
+        let min_mask = self.mask_short;
+        let max_mask = self.mask_long;
 
         let min_size = (1 << (self.gear.chunk_bits - SPREAD_BITS + 1)) as u64;
 
