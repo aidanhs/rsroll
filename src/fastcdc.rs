@@ -26,6 +26,11 @@ fn get_masks(avg_size: usize, nc_level: usize, seed: u64) -> (u64, u64) {
     (mask_short, mask_long)
 }
 
+/// FastCDC chunking
+///
+/// * Paper: "FastCDC: a Fast and Efficient Content-Defined Chunking Approach for Data Deduplication"
+/// * Paper-URL: https://www.usenix.org/system/files/conference/atc16/atc16-paper-xia.pdf
+/// * Presentation: https://www.usenix.org/sites/default/files/conference/protected-files/atc16_slides_xia.pdf
 pub struct FastCDC {
     current_chunk_size: u64,
     gear: Gear,
