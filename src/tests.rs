@@ -36,6 +36,7 @@ fn bup_selftest()
     assert_eq!(sum3a, sum3b);
 }
 
+#[allow(unused)]
 pub fn test_data_1mb() -> Vec<u8> {
     let mut v = vec![0x0; 1024 * 1024];
 
