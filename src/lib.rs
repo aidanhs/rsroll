@@ -35,7 +35,7 @@ pub trait RollingHash {
     fn reset(&mut self);
 }
 
-trait CDC {
+pub trait CDC {
     /// Find the end of the chunk.
     ///
     /// When edge is find, state of CDC should automatically be reset.
@@ -48,7 +48,6 @@ trait CDC {
     ///          in two pieces. The second one has not yet been searched
     ///          for more chunks.
     fn find_chunk<'a>(&mut self, buf: &'a [u8]) -> Option<(&'a [u8], &'a [u8])>;
-
 }
 
 #[cfg(test)]
