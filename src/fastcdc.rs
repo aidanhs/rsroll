@@ -97,61 +97,63 @@ impl FastCDC {
 impl CDC for FastCDC {
     /// Find chunk edge using `FastCDC` defaults.
     fn find_chunk<'a>(&mut self, whole_buf: &'a [u8]) -> Option<(&'a [u8], &'a [u8])> {
-        let mut buf = whole_buf;
+        let mut left = whole_buf;
 
         debug_assert!(self.current_chunk_size < self.max_size);
 
         // ignore bytes that are not going to influence the digest
         if self.current_chunk_size < self.ignore_size {
-            let skip_bytes = cmp::min(self.ignore_size - self.current_chunk_size, buf.len() as u64);
+            let skip_bytes = cmp::min(self.ignore_size - self.current_chunk_size, left.len() as u64);
             self.current_chunk_size += skip_bytes;
-            buf = &buf[skip_bytes as usize..];
+            left= &left[skip_bytes as usize..];
         }
 
         // ignore edges in bytes that are smaller than min_size
         if self.current_chunk_size < self.min_size {
-            let roll_bytes = cmp::min(self.min_size - self.current_chunk_size, buf.len() as u64);
-            self.gear.roll(&buf[..roll_bytes as usize]);
+            let roll_bytes = cmp::min(self.min_size - self.current_chunk_size, left.len() as u64);
+            self.gear.roll(&left[..roll_bytes as usize]);
             self.current_chunk_size += roll_bytes;
-            buf = &buf[roll_bytes as usize..];
+            left = &left [roll_bytes as usize..];
         }
 
         // roll through early bytes with smaller probability
         if self.current_chunk_size < self.avg_size {
-            let roll_bytes = cmp::min(self.avg_size - self.current_chunk_size, buf.len() as u64);
-            let result = self.gear.find_chunk_mask(buf, self.mask_short);
+            let roll_bytes = cmp::min(self.avg_size - self.current_chunk_size, left.len() as u64);
+            let result = self.gear.find_chunk_mask(left, self.mask_short);
 
-            if let Some(result) = result {
+            if let Some((_last, rest)) = result {
+                let result = (&whole_buf[..whole_buf.len() - rest.len()], rest);
                 self.reset();
                 return Some(result);
             }
 
             self.current_chunk_size += roll_bytes;
-            buf = &buf[roll_bytes as usize..];
+            left = &left[roll_bytes as usize..];
         }
 
         // roll through late bytes with higher probability
         if self.current_chunk_size < self.max_size {
-            let roll_bytes = cmp::min(self.max_size - self.current_chunk_size, buf.len() as u64);
-            let result = self.gear.find_chunk_mask(buf, self.mask_long);
+            let roll_bytes = cmp::min(self.max_size - self.current_chunk_size, left.len() as u64);
+            let result = self.gear.find_chunk_mask(left, self.mask_long);
 
-            if let Some(result) = result {
+            if let Some((_last, rest)) = result {
+                let result = (&whole_buf[..whole_buf.len() - rest.len()], rest);
                 self.reset();
                 return Some(result);
             }
 
             self.current_chunk_size += roll_bytes;
-            buf = &buf[roll_bytes as usize..];
+            left = &left[roll_bytes as usize..];
         }
 
         if self.current_chunk_size >= self.max_size {
             debug_assert_eq!(self.current_chunk_size, self.max_size);
-            let result = (&whole_buf[..whole_buf.len() - buf.len()], buf);
+            let result = (&whole_buf[..whole_buf.len() - left.len()], left);
             self.reset();
             return Some(result);
         }
 
-        if buf.is_empty() {
+        if left.is_empty() {
             return None;
         }
         unreachable!();
@@ -168,7 +170,7 @@ mod tests {
 
         use tests::test_data_1mb;
 
-        use CDC;
+        use {CDC, FastCDC};
 
         #[bench]
         fn perf_1mb_004k_chunks(b: &mut Bencher) {
