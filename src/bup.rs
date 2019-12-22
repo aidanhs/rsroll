@@ -112,9 +112,12 @@ impl Bup {
     /// Be aware that there's a deliberate 'bug' in this function
     /// in order to match expected return values from other bupsplit
     /// implementations.
-    pub fn count_bits(&self) -> u32 {
+    // Note: because of the state is reset after finding an edge, assist
+    // users use this correctly by making them pass in a digest they've
+    // obtained.
+    pub fn count_bits(&self, digest: <Self as Engine>::Digest) -> u32 {
         let mut bits = self.chunk_bits;
-        let mut rsum = self.digest() >> self.chunk_bits;
+        let mut rsum = digest >> self.chunk_bits;
         // Yes, the ordering of this loop does mean that the
         // `CHUNK_BITS+1`th bit will be ignored. This isn't actually
         // a problem as the distribution of values will be the same,
