@@ -2,7 +2,7 @@ rollsum is based on bupsplit, which in turn is based on rsync chunking.
 
 Interface liable to change.
 
-http://aidanhs.github.io/rsroll/
+https://docs.rs/rollsum
 
 ```
 extern crate rollsum;

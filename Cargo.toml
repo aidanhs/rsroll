@@ -1,6 +1,6 @@
 [package]
 name = "rollsum"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Aidan Hobson Sayers <aidanhs@cantab.net>"]
 repository = "https://github.com/aidanhs/rsroll"
 documentation = "http://aidanhs.github.io/rsroll/"
