@@ -1,5 +1,5 @@
 use super::Engine;
-use rand::{Rng, SeedableRng, StdRng};
+use nanorand::{Rng, WyRand};
 
 #[test]
 fn bup_selftest() {
@@ -15,8 +15,7 @@ fn bup_selftest() {
         e.digest()
     }
 
-    let seed: &[_] = &[1, 2, 3, 4];
-    let mut rng: StdRng = SeedableRng::from_seed(seed);
+    let mut rng = WyRand::new_seed(0x01020304);
     rng.fill_bytes(&mut buf);
 
     let sum1a: u32 = sum(&buf[0..]);

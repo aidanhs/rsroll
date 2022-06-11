@@ -16,4 +16,4 @@ bup = []
 bench = []
 
 [dev-dependencies]
-rand = "0.3"
+nanorand = "0.7"

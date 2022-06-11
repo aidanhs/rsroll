@@ -132,18 +132,15 @@ impl Bup {
 #[cfg(all(feature = "bench", test))]
 mod tests {
     use super::Bup;
-    use rand::{Rng, SeedableRng, StdRng};
+    use nanorand::{Rng, WyRand};
     use test::Bencher;
 
     #[bench]
     fn bup_perf_1mb(b: &mut Bencher) {
         let mut v = vec![0x0; 1024 * 1024];
 
-        let seed: &[_] = &[1, 2, 3, 4];
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        for i in 0..v.len() {
-            v[i] = rng.gen();
-        }
+        let mut rng = WyRand::new_seed(0x01020304);
+        rng.fill_bytes(&mut v);
 
         b.iter(|| {
             let mut bup = Bup::new();
