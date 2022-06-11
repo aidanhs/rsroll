@@ -7,6 +7,7 @@ documentation = "http://aidanhs.github.io/rsroll/"
 readme = "README.md"
 description = "Rolling checksum implementation"
 license = "BSD-3-Clause"
+edition = "2018"
 
 [features]
 default = ["gear", "bup"]
