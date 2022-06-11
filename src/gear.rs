@@ -30,7 +30,7 @@ impl Engine for Gear {
 
     #[inline(always)]
     fn roll_byte(&mut self, b: u8) {
-        self.digest = self.digest << 1;
+        self.digest <<= 1;
         self.digest += Wrapping(unsafe { *G.get_unchecked(b as usize) });
     }
 
@@ -61,7 +61,7 @@ impl Gear {
     pub fn new_with_chunk_bits(chunk_bits: u32) -> Self {
         assert!(chunk_bits < 32);
         Gear {
-            chunk_bits: chunk_bits,
+            chunk_bits,
             ..Default::default()
         }
     }

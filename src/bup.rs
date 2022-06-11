@@ -80,7 +80,7 @@ impl Bup {
     pub fn new_with_chunk_bits(chunk_bits: u32) -> Self {
         assert!(chunk_bits < 32);
         Bup {
-            chunk_bits: chunk_bits,
+            chunk_bits,
             ..Default::default()
         }
     }

@@ -17,9 +17,7 @@ fn bup_selftest() {
 
     let seed: &[_] = &[1, 2, 3, 4];
     let mut rng: StdRng = SeedableRng::from_seed(seed);
-    for count in 0..SELFTEST_SIZE {
-        buf[count] = rng.gen();
-    }
+    rng.fill_bytes(&mut buf);
 
     let sum1a: u32 = sum(&buf[0..]);
     let sum1b: u32 = sum(&buf[1..]);
