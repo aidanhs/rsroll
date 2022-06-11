@@ -175,29 +175,3 @@ mod tests {
         assert_eq!(bup.count_bits(0xFFFFFFFF), 31);
     }
 }
-
-#[cfg(all(feature = "bench", test))]
-mod benches {
-    use super::Bup;
-    use nanorand::{Rng, WyRand};
-    use test::Bencher;
-
-    #[bench]
-    fn bup_perf_1mb(b: &mut Bencher) {
-        let mut v = vec![0x0; 1024 * 1024];
-
-        let mut rng = WyRand::new_seed(0x01020304);
-        rng.fill_bytes(&mut v);
-
-        b.iter(|| {
-            let mut bup = Bup::new();
-            let mut i = 0;
-            while let Some((new_i, _)) = bup.find_chunk_edge(&v[i..v.len()]) {
-                i += new_i;
-                if i == v.len() {
-                    break;
-                }
-            }
-        });
-    }
-}

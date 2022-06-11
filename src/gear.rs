@@ -103,30 +103,4 @@ mod tests {
 
         panic!("matching digest not found");
     }
-
-    #[cfg(feature = "bench")]
-    mod bench {
-        use super::*;
-        use nanorand::{Rng, WyRand};
-        use test::Bencher;
-
-        #[bench]
-        fn gear_perf_1mb(b: &mut Bencher) {
-            let mut v = vec![0x0; 1024 * 1024];
-
-            let mut rng = WyRand::new_seed(0x01020304);
-            rng.fill_bytes(&mut v);
-
-            b.iter(|| {
-                let mut gear = Gear::new();
-                let mut i = 0;
-                while let Some((new_i, _)) = gear.find_chunk_edge(&v[i..v.len()]) {
-                    i += new_i;
-                    if i == v.len() {
-                        break;
-                    }
-                }
-            });
-        }
-    }
 }

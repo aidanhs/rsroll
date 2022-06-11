@@ -17,3 +17,8 @@ bench = []
 
 [dev-dependencies]
 nanorand = "0.7"
+criterion = { version = "0.3", features = ["html_reports"] }
+
+[[bench]]
+name = "bench"
+harness = false
