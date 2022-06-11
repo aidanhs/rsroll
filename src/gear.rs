@@ -3,14 +3,19 @@ use std::default::Default;
 use std::mem;
 use std::num::Wrapping;
 
+pub type Digest = u64;
+
 /// Default chunk size used by `gear`
 pub const CHUNK_SIZE: u32 = 1 << CHUNK_BITS;
 
 /// Default chunk size used by `gear` (log2)
 pub const CHUNK_BITS: u32 = 13;
 
+/// The effective window size used by `gear`
+pub const WINDOW_SIZE: usize = mem::size_of::<Digest>() * 8;
+
 pub struct Gear {
-    digest: Wrapping<u64>,
+    digest: Wrapping<Digest>,
     chunk_bits: u32,
 }
 
@@ -26,7 +31,7 @@ impl Default for Gear {
 include!("_gear_rand.rs");
 
 impl Engine for Gear {
-    type Digest = u64;
+    type Digest = Digest;
 
     #[inline(always)]
     fn roll_byte(&mut self, b: u8) {
@@ -34,8 +39,12 @@ impl Engine for Gear {
         self.digest += Wrapping(G[b as usize]);
     }
 
+    fn roll(&mut self, buf: &[u8]) {
+        crate::roll_windowed(self, WINDOW_SIZE, buf);
+    }
+
     #[inline(always)]
-    fn digest(&self) -> u64 {
+    fn digest(&self) -> Digest {
         self.digest.0
     }
 
@@ -69,9 +78,8 @@ impl Gear {
     /// Find chunk edge using Gear defaults.
     ///
     /// See `Engine::find_chunk_edge_cond`.
-    pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<(usize, u64)> {
-        const DIGEST_SIZE: usize = 64;
-        debug_assert_eq!(mem::size_of::<<Self as Engine>::Digest>() * 8, DIGEST_SIZE);
+    pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<(usize, Digest)> {
+        const DIGEST_SIZE: usize = mem::size_of::<Digest>();
         let shift = DIGEST_SIZE as u32 - self.chunk_bits;
         self.find_chunk_edge_cond(buf, |e: &Gear| (e.digest() >> shift) == 0)
     }
@@ -79,7 +87,7 @@ impl Gear {
 
 #[cfg(test)]
 mod tests {
-    use super::{Engine, Gear};
+    use super::*;
 
     #[test]
     fn effective_window_size() {
@@ -94,11 +102,11 @@ mod tests {
         gear.roll(&zeroes);
 
         for (i, &b) in ones.iter().enumerate() {
-            gear.roll_byte(b);
             if gear.digest() == digest {
-                assert_eq!(i, 63);
+                assert_eq!(i, WINDOW_SIZE);
                 return;
             }
+            gear.roll_byte(b);
         }
 
         panic!("matching digest not found");

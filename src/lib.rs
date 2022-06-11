@@ -64,6 +64,14 @@ pub trait Engine {
     }
 }
 
+#[inline]
+fn roll_windowed<E: Engine>(engine: &mut E, window_size: usize, data: &[u8]) {
+    let last_window = data.windows(window_size).next_back().unwrap_or(data);
+    for &b in last_window {
+        engine.roll_byte(b);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

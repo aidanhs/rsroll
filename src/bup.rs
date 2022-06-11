@@ -1,6 +1,8 @@
 use super::Engine;
 use std::default::Default;
 
+pub type Digest = u32;
+
 const WINDOW_BITS: usize = 6;
 const WINDOW_SIZE: usize = 1 << WINDOW_BITS;
 
@@ -39,7 +41,7 @@ impl Default for Bup {
 }
 
 impl Engine for Bup {
-    type Digest = u32;
+    type Digest = Digest;
 
     #[inline(always)]
     fn roll_byte(&mut self, newch: u8) {
@@ -53,9 +55,13 @@ impl Engine for Bup {
         self.wofs = (self.wofs + 1) % WINDOW_SIZE;
     }
 
+    fn roll(&mut self, buf: &[u8]) {
+        crate::roll_windowed(self, WINDOW_SIZE, buf);
+    }
+
     #[inline(always)]
-    fn digest(&self) -> u32 {
-        ((self.s1 as u32) << 16) | ((self.s2 as u32) & 0xffff)
+    fn digest(&self) -> Digest {
+        ((self.s1 as Digest) << 16) | ((self.s2 as Digest) & 0xffff)
     }
 
     #[inline]
@@ -96,7 +102,7 @@ impl Bup {
     /// Find chunk edge using Bup defaults.
     ///
     /// See `Engine::find_chunk_edge_cond`.
-    pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<(usize, u32)> {
+    pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<(usize, Digest)> {
         let chunk_mask = (1 << self.chunk_bits) - 1;
         self.find_chunk_edge_cond(buf, |e: &Bup| e.digest() & chunk_mask == chunk_mask)
     }
@@ -111,7 +117,7 @@ impl Bup {
     // Note: because of the state is reset after finding an edge, assist
     // users use this correctly by making them pass in a digest they've
     // obtained.
-    pub fn count_bits(&self, digest: <Self as Engine>::Digest) -> u32 {
+    pub fn count_bits(&self, digest: Digest) -> u32 {
         let rsum = digest >> self.chunk_bits;
 
         // Ignore the next bit as well. This isn't actually
