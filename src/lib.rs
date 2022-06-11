@@ -1,8 +1,5 @@
 #![cfg_attr(feature = "bench", feature(test))]
 
-#[cfg(test)]
-extern crate rand;
-
 #[cfg(feature = "bench")]
 extern crate test;
 
