@@ -31,7 +31,7 @@ impl Engine for Gear {
     #[inline(always)]
     fn roll_byte(&mut self, b: u8) {
         self.digest <<= 1;
-        self.digest += Wrapping(unsafe { *G.get_unchecked(b as usize) });
+        self.digest += Wrapping(G[b as usize]);
     }
 
     #[inline(always)]
