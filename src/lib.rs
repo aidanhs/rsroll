@@ -63,6 +63,3 @@ pub trait Engine {
         None
     }
 }
-
-#[cfg(test)]
-mod tests;
