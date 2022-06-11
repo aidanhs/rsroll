@@ -24,7 +24,7 @@ pub trait Engine {
 
     /// Roll over a slice of bytes
     fn roll(&mut self, buf: &[u8]) {
-        buf.iter().map(|&b| self.roll_byte(b)).count();
+        buf.iter().for_each(|&b| self.roll_byte(b));
     }
 
     /// Return current rolling sum digest
