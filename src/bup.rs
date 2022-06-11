@@ -112,25 +112,40 @@ impl Bup {
     // users use this correctly by making them pass in a digest they've
     // obtained.
     pub fn count_bits(&self, digest: <Self as Engine>::Digest) -> u32 {
-        let mut bits = self.chunk_bits;
-        let mut rsum = digest >> self.chunk_bits;
-        // Yes, the ordering of this loop does mean that the
-        // `CHUNK_BITS+1`th bit will be ignored. This isn't actually
+        let rsum = digest >> self.chunk_bits;
+
+        // Ignore the next bit as well. This isn't actually
         // a problem as the distribution of values will be the same,
         // but it is unexpected.
-        loop {
-            rsum >>= 1;
-            if (rsum & 1) == 0 {
-                break;
-            }
-            bits += 1;
-        }
-        bits
+        let rsum = rsum >> 1;
+        rsum.trailing_ones() + self.chunk_bits
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use nanorand::{Rng, WyRand};
+
+    #[test]
+    fn count_bits() {
+        let bup = Bup::new_with_chunk_bits(1);
+        // Ignores `chunk_bits + 1`th bit
+        assert_eq!(bup.count_bits(0b001), 1);
+        assert_eq!(bup.count_bits(0b011), 1);
+        assert_eq!(bup.count_bits(0b101), 2);
+        assert_eq!(bup.count_bits(0b111), 2);
+        assert_eq!(bup.count_bits(0xFFFFFFFF), 31);
+
+        let bup = Bup::new_with_chunk_bits(5);
+        assert_eq!(bup.count_bits(0b0001011111), 6);
+        assert_eq!(bup.count_bits(0b1011011111), 7);
+        assert_eq!(bup.count_bits(0xFFFFFFFF), 31);
     }
 }
 
 #[cfg(all(feature = "bench", test))]
-mod tests {
+mod benches {
     use super::Bup;
     use nanorand::{Rng, WyRand};
     use test::Bencher;
