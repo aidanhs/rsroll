@@ -11,12 +11,12 @@ extern crate test;
 #[cfg(feature = "bup")]
 pub mod bup;
 #[cfg(feature = "bup")]
-pub use bup::Bup;
+pub use crate::bup::Bup;
 
 #[cfg(feature = "gear")]
 pub mod gear;
 #[cfg(feature = "gear")]
-pub use gear::Gear;
+pub use crate::gear::Gear;
 
 /// Rolling sum engine trait
 pub trait Engine {
