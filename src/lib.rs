@@ -8,12 +8,15 @@ extern crate test;
 
 /// Rolling sum and chunk splitting used by
 /// `bup` - https://github.com/bup/bup/
+#[cfg(feature = "bup")]
 pub mod bup;
-
-pub mod gear;
-pub use gear::Gear;
-
+#[cfg(feature = "bup")]
 pub use bup::Bup;
+
+#[cfg(feature = "gear")]
+pub mod gear;
+#[cfg(feature = "gear")]
+pub use gear::Gear;
 
 /// Rolling sum engine trait
 pub trait Engine {

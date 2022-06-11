@@ -9,7 +9,9 @@ description = "Rolling checksum implementation"
 license = "BSD-3-Clause"
 
 [features]
-default = []
+default = ["gear", "bup"]
+gear = []
+bup = []
 bench = []
 
 [dev-dependencies]
