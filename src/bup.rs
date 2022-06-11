@@ -129,7 +129,7 @@ impl Bup {
     }
 }
 
-#[cfg(feature = "bench")]
+#[cfg(all(feature = "bench", test))]
 mod tests {
     use super::Bup;
     use rand::{Rng, SeedableRng, StdRng};
