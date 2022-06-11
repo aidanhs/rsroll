@@ -47,8 +47,10 @@ pub trait Engine {
     /// * Some - offset of the first unconsumed byte of `buf` and the digest of
     ///   the whole chunk. `offset` == buf.len() if the chunk ended right after
     ///   the whole `buf`.
-    fn find_chunk_edge_cond<F>(&mut self, buf: &[u8], cond : F) -> Option<(usize, Self::Digest)>
-    where F : Fn(&Self) -> bool {
+    fn find_chunk_edge_cond<F>(&mut self, buf: &[u8], cond: F) -> Option<(usize, Self::Digest)>
+    where
+        F: Fn(&Self) -> bool,
+    {
         for (i, &b) in buf.iter().enumerate() {
             self.roll_byte(b);
 

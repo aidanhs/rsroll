@@ -12,7 +12,6 @@ pub const CHUNK_SIZE: u32 = 1 << CHUNK_BITS;
 /// Default chunk size used by `bup` (log2)
 pub const CHUNK_BITS: u32 = 13;
 
-
 /// Rolling checksum method used by `bup`
 ///
 /// Strongly based on
@@ -31,14 +30,13 @@ impl Default for Bup {
     fn default() -> Self {
         Bup {
             s1: WINDOW_SIZE * CHAR_OFFSET,
-            s2: WINDOW_SIZE * (WINDOW_SIZE-1) * CHAR_OFFSET,
+            s2: WINDOW_SIZE * (WINDOW_SIZE - 1) * CHAR_OFFSET,
             window: [0; WINDOW_SIZE],
             wofs: 0,
             chunk_bits: CHUNK_BITS,
         }
     }
 }
-
 
 impl Engine for Bup {
     type Digest = u32;
@@ -51,7 +49,7 @@ impl Engine for Bup {
         // https://github.com/rust-lang/rfcs/issues/811
         let prevch = unsafe { *self.window.get_unchecked(self.wofs) };
         self.add(prevch, newch);
-        unsafe { *self.window.get_unchecked_mut(self.wofs)  = newch };
+        unsafe { *self.window.get_unchecked_mut(self.wofs) = newch };
         self.wofs = (self.wofs + 1) % WINDOW_SIZE;
     }
 
@@ -64,7 +62,7 @@ impl Engine for Bup {
     fn reset(&mut self) {
         *self = Bup {
             chunk_bits: self.chunk_bits,
-            .. Default::default()
+            ..Default::default()
         }
     }
 }
@@ -83,7 +81,7 @@ impl Bup {
         assert!(chunk_bits < 32);
         Bup {
             chunk_bits: chunk_bits,
-            .. Default::default()
+            ..Default::default()
         }
     }
 
@@ -100,9 +98,7 @@ impl Bup {
     /// See `Engine::find_chunk_edge_cond`.
     pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<(usize, u32)> {
         let chunk_mask = (1 << self.chunk_bits) - 1;
-        self.find_chunk_edge_cond(buf, |e: &Bup|
-            e.digest() & chunk_mask == chunk_mask
-        )
+        self.find_chunk_edge_cond(buf, |e: &Bup| e.digest() & chunk_mask == chunk_mask)
     }
 
     /// Counts the number of low bits set in the rollsum, assuming
@@ -135,9 +131,9 @@ impl Bup {
 
 #[cfg(feature = "bench")]
 mod tests {
-    use test::Bencher;
     use super::Bup;
     use rand::{Rng, SeedableRng, StdRng};
+    use test::Bencher;
 
     #[bench]
     fn bup_perf_1mb(b: &mut Bencher) {
@@ -155,7 +151,7 @@ mod tests {
             while let Some((new_i, _)) = bup.find_chunk_edge(&v[i..v.len()]) {
                 i += new_i;
                 if i == v.len() {
-                    break
+                    break;
                 }
             }
         });
