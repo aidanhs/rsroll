@@ -1,6 +1,8 @@
 use super::Engine;
 use std::default::Default;
 
+pub type Digest = u32;
+
 const WINDOW_BITS: usize = 6;
 const WINDOW_SIZE: usize = 1 << WINDOW_BITS;
 
@@ -11,7 +13,6 @@ pub const CHUNK_SIZE: u32 = 1 << CHUNK_BITS;
 
 /// Default chunk size used by `bup` (log2)
 pub const CHUNK_BITS: u32 = 13;
-
 
 /// Rolling checksum method used by `bup`
 ///
@@ -31,7 +32,7 @@ impl Default for Bup {
     fn default() -> Self {
         Bup {
             s1: WINDOW_SIZE * CHAR_OFFSET,
-            s2: WINDOW_SIZE * (WINDOW_SIZE-1) * CHAR_OFFSET,
+            s2: WINDOW_SIZE * (WINDOW_SIZE - 1) * CHAR_OFFSET,
             window: [0; WINDOW_SIZE],
             wofs: 0,
             chunk_bits: CHUNK_BITS,
@@ -39,9 +40,8 @@ impl Default for Bup {
     }
 }
 
-
 impl Engine for Bup {
-    type Digest = u32;
+    type Digest = Digest;
 
     #[inline(always)]
     fn roll_byte(&mut self, newch: u8) {
@@ -51,20 +51,24 @@ impl Engine for Bup {
         // https://github.com/rust-lang/rfcs/issues/811
         let prevch = unsafe { *self.window.get_unchecked(self.wofs) };
         self.add(prevch, newch);
-        unsafe { *self.window.get_unchecked_mut(self.wofs)  = newch };
+        unsafe { *self.window.get_unchecked_mut(self.wofs) = newch };
         self.wofs = (self.wofs + 1) % WINDOW_SIZE;
     }
 
+    fn roll(&mut self, buf: &[u8]) {
+        crate::roll_windowed(self, WINDOW_SIZE, buf);
+    }
+
     #[inline(always)]
-    fn digest(&self) -> u32 {
-        ((self.s1 as u32) << 16) | ((self.s2 as u32) & 0xffff)
+    fn digest(&self) -> Digest {
+        ((self.s1 as Digest) << 16) | ((self.s2 as Digest) & 0xffff)
     }
 
     #[inline]
     fn reset(&mut self) {
         *self = Bup {
             chunk_bits: self.chunk_bits,
-            .. Default::default()
+            ..Default::default()
         }
     }
 }
@@ -82,8 +86,8 @@ impl Bup {
     pub fn new_with_chunk_bits(chunk_bits: u32) -> Self {
         assert!(chunk_bits < 32);
         Bup {
-            chunk_bits: chunk_bits,
-            .. Default::default()
+            chunk_bits,
+            ..Default::default()
         }
     }
 
@@ -98,11 +102,9 @@ impl Bup {
     /// Find chunk edge using Bup defaults.
     ///
     /// See `Engine::find_chunk_edge_cond`.
-    pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<(usize, u32)> {
+    pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<(usize, Digest)> {
         let chunk_mask = (1 << self.chunk_bits) - 1;
-        self.find_chunk_edge_cond(buf, |e: &Bup|
-            e.digest() & chunk_mask == chunk_mask
-        )
+        self.find_chunk_edge_cond(buf, |e: &Bup| e.digest() & chunk_mask == chunk_mask)
     }
 
     /// Counts the number of low bits set in the rollsum, assuming
@@ -115,49 +117,67 @@ impl Bup {
     // Note: because of the state is reset after finding an edge, assist
     // users use this correctly by making them pass in a digest they've
     // obtained.
-    pub fn count_bits(&self, digest: <Self as Engine>::Digest) -> u32 {
-        let mut bits = self.chunk_bits;
-        let mut rsum = digest >> self.chunk_bits;
-        // Yes, the ordering of this loop does mean that the
-        // `CHUNK_BITS+1`th bit will be ignored. This isn't actually
+    pub fn count_bits(&self, digest: Digest) -> u32 {
+        let rsum = digest >> self.chunk_bits;
+
+        // Ignore the next bit as well. This isn't actually
         // a problem as the distribution of values will be the same,
         // but it is unexpected.
-        loop {
-            rsum >>= 1;
-            if (rsum & 1) == 0 {
-                break;
-            }
-            bits += 1;
-        }
-        bits
+        let rsum = rsum >> 1;
+        rsum.trailing_ones() + self.chunk_bits
     }
 }
 
-#[cfg(feature = "bench")]
+#[cfg(test)]
 mod tests {
-    use test::Bencher;
-    use super::Bup;
-    use rand::{Rng, SeedableRng, StdRng};
+    use super::*;
+    use nanorand::{Rng, WyRand};
 
-    #[bench]
-    fn bup_perf_1mb(b: &mut Bencher) {
-        let mut v = vec![0x0; 1024 * 1024];
+    #[test]
+    fn bup_selftest() {
+        use super::Bup;
+        const WINDOW_SIZE: usize = 1 << 6;
 
-        let seed: &[_] = &[1, 2, 3, 4];
-        let mut rng: StdRng = SeedableRng::from_seed(seed);
-        for i in 0..v.len() {
-            v[i] = rng.gen();
+        const SELFTEST_SIZE: usize = 100000;
+        let mut buf = [0u8; SELFTEST_SIZE];
+
+        fn sum(buf: &[u8]) -> u32 {
+            let mut e = Bup::new();
+            e.roll(buf);
+            e.digest()
         }
 
-        b.iter(|| {
-            let mut bup = Bup::new();
-            let mut i = 0;
-            while let Some((new_i, _)) = bup.find_chunk_edge(&v[i..v.len()]) {
-                i += new_i;
-                if i == v.len() {
-                    break
-                }
-            }
-        });
+        let mut rng = WyRand::new_seed(0x01020304);
+        rng.fill_bytes(&mut buf);
+
+        let sum1a: u32 = sum(&buf[0..]);
+        let sum1b: u32 = sum(&buf[1..]);
+
+        let sum2a: u32 =
+            sum(&buf[SELFTEST_SIZE - WINDOW_SIZE * 5 / 2..SELFTEST_SIZE - WINDOW_SIZE]);
+        let sum2b: u32 = sum(&buf[0..SELFTEST_SIZE - WINDOW_SIZE]);
+
+        let sum3a: u32 = sum(&buf[0..WINDOW_SIZE + 4]);
+        let sum3b: u32 = sum(&buf[3..WINDOW_SIZE + 4]);
+
+        assert_eq!(sum1a, sum1b);
+        assert_eq!(sum2a, sum2b);
+        assert_eq!(sum3a, sum3b);
+    }
+
+    #[test]
+    fn count_bits() {
+        let bup = Bup::new_with_chunk_bits(1);
+        // Ignores `chunk_bits + 1`th bit
+        assert_eq!(bup.count_bits(0b001), 1);
+        assert_eq!(bup.count_bits(0b011), 1);
+        assert_eq!(bup.count_bits(0b101), 2);
+        assert_eq!(bup.count_bits(0b111), 2);
+        assert_eq!(bup.count_bits(0xFFFFFFFF), 31);
+
+        let bup = Bup::new_with_chunk_bits(5);
+        assert_eq!(bup.count_bits(0b0001011111), 6);
+        assert_eq!(bup.count_bits(0b1011011111), 7);
+        assert_eq!(bup.count_bits(0xFFFFFFFF), 31);
     }
 }

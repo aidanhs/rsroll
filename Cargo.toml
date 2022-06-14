@@ -7,10 +7,17 @@ documentation = "http://aidanhs.github.io/rsroll/"
 readme = "README.md"
 description = "Rolling checksum implementation"
 license = "BSD-3-Clause"
+edition = "2018"
 
 [features]
-default = []
-bench = []
+default = ["gear", "bup"]
+gear = []
+bup = []
 
 [dev-dependencies]
-rand = "0.3"
+nanorand = "0.7"
+criterion = { version = "0.3", features = ["html_reports"] }
+
+[[bench]]
+name = "bench"
+harness = false
