@@ -1,5 +1,4 @@
 PKG_NAME=rollsum
-DOCS_DEFAULT_MODULE=$(PKG_NAME)
 
 ifeq (, $(shell which cargo-check 2> /dev/null))
 DEFAULT_TARGET=build
@@ -25,15 +24,12 @@ EXAMPLES = $(shell cd examples 2>/dev/null && ls *.rs 2>/dev/null | sed -e 's/.r
 all: $(ALL_TARGETS)
 
 .PHONY: run test build doc clean clippy
-run test build clean:
+run test build clean clippy:
 	cargo $@ $(CARGO_FLAGS)
 
 check:
 	$(info Running check; use `make build` to actually build)
 	cargo $@ $(CARGO_FLAGS)
-
-clippy:
-	cargo build --features clippy
 
 .PHONY: bench
 bench:
@@ -46,14 +42,9 @@ $(EXAMPLES):
 doc: FORCE
 	cargo doc
 
-publishdoc: doc
-	echo '<meta http-equiv="refresh" content="0;url='${DOCS_DEFAULT_MODULE}'/index.html">' > target/doc/index.html
-	ghp-import -n target/doc
-	git push -f origin gh-pages
-
 .PHONY: docview
-docview: doc
-	xdg-open target/doc/$(PKG_NAME)/index.html
+docview:
+	cargo doc --open
 
 .PHONY: FORCE
 FORCE:

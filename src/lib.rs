@@ -1,8 +1,3 @@
-#![cfg_attr(feature = "bench", feature(test))]
-
-#[cfg(feature = "bench")]
-extern crate test;
-
 /// Rolling sum and chunk splitting used by
 /// `bup` - https://github.com/bup/bup/
 #[cfg(feature = "bup")]

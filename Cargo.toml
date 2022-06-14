@@ -13,7 +13,6 @@ edition = "2018"
 default = ["gear", "bup"]
 gear = []
 bup = []
-bench = []
 
 [dev-dependencies]
 nanorand = "0.7"
