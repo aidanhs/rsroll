@@ -28,7 +28,6 @@ pub struct Bup {
     chunk_bits: u32,
 }
 
-#[derive(Debug, Clone)]
 struct State {
     s1: u32,
     s2: u32,
@@ -226,15 +225,38 @@ mod tests {
         assert_eq!(sum3a, sum3b);
     }
 
+    fn window_ordered(bup: &Bup) -> [u8; WINDOW_SIZE] {
+        let mut result = bup.window;
+        result.rotate_left(bup.wofs);
+        result
+    }
+
     #[test]
-    fn no_chunk_keeps_window() {
+    fn short_no_chunk_keeps_window() {
         let data = [1, 2, 3];
         let mut bup = Bup::new();
         let edge = bup.find_chunk_edge(&data);
         assert_eq!(edge, None);
-        assert_eq!(&bup.window[..3], &[1, 2, 3]);
-        assert!(bup.window[3..].iter().all(|&b| b == 0));
-        assert!(bup.wofs == 3);
+        let window = window_ordered(&bup);
+        assert_eq!(&window[window.len() - 3..], &[1, 2, 3]);
+        assert!(window[..window.len() - 3].iter().all(|&b| b == 0));
+    }
+
+    #[test]
+    fn long_no_chunk_keeps_window() {
+        let mut data = [0; 65];
+        for (i, dst) in data.iter_mut().enumerate() {
+            *dst = i as u8;
+        }
+        let mut bup = Bup::new();
+        let edge = bup.find_chunk_edge(&data);
+        assert_eq!(edge, None);
+        let mut expected_window = [0; 64];
+        for (i, dst) in expected_window.iter_mut().enumerate() {
+            // Rolled over >64 bytes, will copy them starting from the beginning
+            *dst = (i + 1) as u8;
+        }
+        assert_eq!(expected_window, window_ordered(&bup));
     }
 
     #[test]
