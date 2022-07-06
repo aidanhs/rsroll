@@ -1,5 +1,6 @@
 use super::Engine;
 use std::default::Default;
+use std::mem;
 
 pub type Digest = u32;
 
@@ -21,18 +22,42 @@ pub const CHUNK_BITS: u32 = 13;
 /// https://github.com/bup/bup/blob/706e8d273/lib/bup/bupsplit.h
 /// (a bit like https://godoc.org/camlistore.org/pkg/rollsum)
 pub struct Bup {
-    s1: usize,
-    s2: usize,
+    state: State,
     window: [u8; WINDOW_SIZE],
     wofs: usize,
     chunk_bits: u32,
 }
 
+struct State {
+    s1: u32,
+    s2: u32,
+}
+
+impl State {
+    const fn new() -> Self {
+        Self {
+            s1: (WINDOW_SIZE * CHAR_OFFSET) as u32,
+            s2: (WINDOW_SIZE * (WINDOW_SIZE - 1) * CHAR_OFFSET) as u32,
+        }
+    }
+
+    #[inline(always)]
+    fn add(&mut self, drop: u8, add: u8) {
+        self.s1 += add as u32;
+        self.s1 -= drop as u32;
+        self.s2 += self.s1;
+        self.s2 -= (WINDOW_SIZE * (drop as usize + CHAR_OFFSET)) as u32;
+    }
+
+    fn digest(&self) -> Digest {
+        ((self.s1 as Digest) << 16) | ((self.s2 as Digest) & 0xffff)
+    }
+}
+
 impl Default for Bup {
     fn default() -> Self {
         Bup {
-            s1: WINDOW_SIZE * CHAR_OFFSET,
-            s2: WINDOW_SIZE * (WINDOW_SIZE - 1) * CHAR_OFFSET,
+            state: State::new(),
             window: [0; WINDOW_SIZE],
             wofs: 0,
             chunk_bits: CHUNK_BITS,
@@ -48,10 +73,10 @@ impl Engine for Bup {
         // Since this crate is performance ciritical, and
         // we're in strict control of `wofs`, it is justified
         // to skip bound checking to increase the performance
-        // https://github.com/rust-lang/rfcs/issues/811
-        let prevch = unsafe { *self.window.get_unchecked(self.wofs) };
-        self.add(prevch, newch);
-        unsafe { *self.window.get_unchecked_mut(self.wofs) = newch };
+        debug_assert!(self.wofs < self.window.len());
+        let slot: &mut u8 = unsafe { self.window.get_unchecked_mut(self.wofs) };
+        let prevch = mem::replace(slot, newch);
+        self.state.add(prevch, newch);
         self.wofs = (self.wofs + 1) % WINDOW_SIZE;
     }
 
@@ -61,7 +86,7 @@ impl Engine for Bup {
 
     #[inline(always)]
     fn digest(&self) -> Digest {
-        ((self.s1 as Digest) << 16) | ((self.s2 as Digest) & 0xffff)
+        self.state.digest()
     }
 
     #[inline]
@@ -70,6 +95,35 @@ impl Engine for Bup {
             chunk_bits: self.chunk_bits,
             ..Default::default()
         }
+    }
+
+    fn find_chunk_edge_cond<F>(&mut self, buf: &[u8], cond: F) -> Option<(usize, Self::Digest)>
+    where
+        F: Fn(&Self) -> bool,
+    {
+        let mut incoming_bytes = buf.iter().copied().enumerate();
+        let outgoing_slices = &[&self.window[self.wofs..], &self.window[..self.wofs], buf];
+
+        for &outgoing_slice in outgoing_slices {
+            for &outgoing in outgoing_slice {
+                let (i, incoming) = match incoming_bytes.next() {
+                    Some(v) => v,
+                    None => {
+                        self.add_to_window(buf);
+                        return None;
+                    }
+                };
+                self.state.add(outgoing, incoming);
+                if cond(self) {
+                    let digest = self.digest();
+                    let end = i + 1;
+                    self.reset();
+                    return Some((end, digest));
+                }
+            }
+        }
+        // the last outgoing slice is as long as incoming
+        unreachable!();
     }
 }
 
@@ -89,14 +143,6 @@ impl Bup {
             chunk_bits,
             ..Default::default()
         }
-    }
-
-    #[inline(always)]
-    fn add(&mut self, drop: u8, add: u8) {
-        self.s1 += add as usize;
-        self.s1 -= drop as usize;
-        self.s2 += self.s1;
-        self.s2 -= WINDOW_SIZE * (drop as usize + CHAR_OFFSET);
     }
 
     /// Find chunk edge using Bup defaults.
@@ -125,6 +171,20 @@ impl Bup {
         // but it is unexpected.
         let rsum = rsum >> 1;
         rsum.trailing_ones() + self.chunk_bits
+    }
+
+    fn add_to_window(&mut self, new_data: &[u8]) {
+        if new_data.len() < WINDOW_SIZE {
+            for &b in new_data {
+                debug_assert!(self.wofs < WINDOW_SIZE);
+                unsafe { *self.window.get_unchecked_mut(self.wofs) = b };
+                self.wofs = (self.wofs + 1) % WINDOW_SIZE;
+            }
+        } else {
+            self.wofs = 0;
+            let last_window = new_data.windows(WINDOW_SIZE).last().unwrap();
+            self.window.copy_from_slice(last_window);
+        }
     }
 }
 
@@ -163,6 +223,40 @@ mod tests {
         assert_eq!(sum1a, sum1b);
         assert_eq!(sum2a, sum2b);
         assert_eq!(sum3a, sum3b);
+    }
+
+    fn window_ordered(bup: &Bup) -> [u8; WINDOW_SIZE] {
+        let mut result = bup.window;
+        result.rotate_left(bup.wofs);
+        result
+    }
+
+    #[test]
+    fn short_no_chunk_keeps_window() {
+        let data = [1, 2, 3];
+        let mut bup = Bup::new();
+        let edge = bup.find_chunk_edge(&data);
+        assert_eq!(edge, None);
+        let window = window_ordered(&bup);
+        assert_eq!(&window[window.len() - 3..], &[1, 2, 3]);
+        assert!(window[..window.len() - 3].iter().all(|&b| b == 0));
+    }
+
+    #[test]
+    fn long_no_chunk_keeps_window() {
+        let mut data = [0; 65];
+        for (i, dst) in data.iter_mut().enumerate() {
+            *dst = i as u8;
+        }
+        let mut bup = Bup::new();
+        let edge = bup.find_chunk_edge(&data);
+        assert_eq!(edge, None);
+        let mut expected_window = [0; 64];
+        for (i, dst) in expected_window.iter_mut().enumerate() {
+            // Rolled over >64 bytes, will copy them starting from the beginning
+            *dst = (i + 1) as u8;
+        }
+        assert_eq!(expected_window, window_ordered(&bup));
     }
 
     #[test]
