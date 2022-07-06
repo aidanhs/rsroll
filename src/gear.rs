@@ -79,7 +79,7 @@ impl Gear {
     ///
     /// See `Engine::find_chunk_edge_cond`.
     pub fn find_chunk_edge(&mut self, buf: &[u8]) -> Option<(usize, Digest)> {
-        const DIGEST_SIZE: usize = mem::size_of::<Digest>();
+        const DIGEST_SIZE: usize = mem::size_of::<Digest>() * 8;
         let shift = DIGEST_SIZE as u32 - self.chunk_bits;
         self.find_chunk_edge_cond(buf, |e: &Gear| (e.digest() >> shift) == 0)
     }
@@ -88,6 +88,7 @@ impl Gear {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::rand_data;
 
     #[test]
     fn effective_window_size() {
@@ -110,5 +111,25 @@ mod tests {
         }
 
         panic!("matching digest not found");
+    }
+
+    #[test]
+    fn edge_expected_size() {
+        let data = rand_data(2 * 1024 * 1024);
+        for bits in 4..13 {
+            let mut gear = Gear::new_with_chunk_bits(bits);
+            let mut size_count = 0;
+            let mut total_sizes = 0;
+            let mut remaining = &data[..];
+            while let Some((i, _)) = gear.find_chunk_edge(remaining) {
+                size_count += 1;
+                total_sizes += i;
+                remaining = &remaining[i..];
+            }
+
+            let expected_average = (1 << bits) as f64;
+            let average = total_sizes as f64 / size_count as f64;
+            assert!(dbg!((average - expected_average).abs() / expected_average) < 0.1)
+        }
     }
 }

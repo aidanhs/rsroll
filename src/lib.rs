@@ -73,7 +73,7 @@ mod tests {
     use nanorand::{Rng, WyRand};
     use std::collections::HashSet;
 
-    fn rand_data(len: usize) -> Vec<u8> {
+    pub(crate) fn rand_data(len: usize) -> Vec<u8> {
         let mut data = vec![0; len];
         let mut rng = WyRand::new_seed(0x01020304);
         rng.fill_bytes(&mut data);
