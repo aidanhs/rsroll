@@ -191,6 +191,7 @@ impl Bup {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::rand_data;
     use nanorand::{Rng, WyRand};
 
     #[test]
@@ -257,6 +258,26 @@ mod tests {
             *dst = (i + 1) as u8;
         }
         assert_eq!(expected_window, window_ordered(&bup));
+    }
+
+    #[test]
+    fn edge_expected_size() {
+        let data = rand_data(2 * 1024 * 1024);
+        for bits in 4..13 {
+            let mut gear = Bup::new_with_chunk_bits(bits);
+            let mut size_count = 0;
+            let mut total_sizes = 0;
+            let mut remaining = &data[..];
+            while let Some((i, _)) = gear.find_chunk_edge(remaining) {
+                size_count += 1;
+                total_sizes += i;
+                remaining = &remaining[i..];
+            }
+
+            let expected_average = (1 << bits) as f64;
+            let average = total_sizes as f64 / size_count as f64;
+            assert!(dbg!((average - expected_average).abs() / expected_average) < 0.1)
+        }
     }
 
     #[test]
